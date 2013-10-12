@@ -17,10 +17,7 @@ object ScalatraScratchpad extends App {
 
     def apply(req: Request): Task[Response] = routes(req)
 
-    type Action[A] = StateT[Task, Context, A]
-    implicit class ActionSyntax[A](self: => A) {
-      def action: Action[A] = StateT[Task, Context, A](ctx => Task.delay((ctx, self)))
-    }
+    type Action[A] = State[Context, A]
 
     def GET[A: Writable](path: String)(action: Action[A]): Unit = routes = ({
       case req: Request if req.prelude.pathInfo == path =>
@@ -29,18 +26,20 @@ object ScalatraScratchpad extends App {
         }
     }: PartialFunction[Request, Task[Response]]) orElse routes
 
-    def contentType: Action[Option[ContentType]] =
-      StateT(ctx => Task.now((ctx, ctx.res.contentType)))
+    def response: State[Context, Response] = get[Context].map(_.res)
+    def transformResponse(f: Response => Response): State[Context, Unit] =
+      modify[Context](ctx => ctx.copy(res = f(ctx.res)))
+
+    def contentType: Action[Option[ContentType]] = response.map(_.contentType)
     def contentType(contentType: ContentType): Action[Unit] =
-      StateT(ctx => Task.now((ctx.copy(res = ctx.res.contentType(contentType))), ()))
+      transformResponse(_.contentType(contentType))
 
-    def status: Action[Status] =
-      StateT(ctx => Task.now((ctx, ctx.res.status)))
+    def status: Action[Status] = response.map(_.status)
     def status(status: Status): Action[Unit] =
-      StateT(ctx => Task.now((ctx.copy(res = ctx.res.status(status))), ()))
+      transformResponse(_.status(status))
 
-    def param(name: String): Action[Option[String]] =
-      StateT(ctx => Task.now((ctx, ctx.params.get(name).flatMap(_.headOption))))
+    def params: Action[Map[String, Seq[String]]] = get[Context].map(_.params)
+    def param(name: String): Action[Option[String]] = params.map(_.get(name).flatMap(_.headOption))
   }
 
   object Example extends Scalatra {
@@ -55,7 +54,7 @@ object ScalatraScratchpad extends App {
       s"x = ${x}"
     }}
 
-    GET("/pure") { "pure".action }
+    GET("/pure") { state("/foo") }
   }
 
   println(Example(Request(RequestPrelude(pathInfo = "/pure"))).run)
