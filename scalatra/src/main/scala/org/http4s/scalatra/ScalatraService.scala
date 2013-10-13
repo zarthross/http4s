@@ -4,7 +4,7 @@ import org.http4s._
 import scalaz.concurrent.Task
 import scala.reflect.macros.{Context => MContext}
 import scalaz._
-import effectful._
+import org.http4s.effectful._
 import scala.language.experimental.macros
 import scalaz.State._
 import scala.reflect.internal.annotations.compileTimeOnly
@@ -12,6 +12,8 @@ import scala.annotation.{TypeConstraint, StaticAnnotation}
 import org.http4s.Request
 
 object ScalatraService {
+  class unwrapped extends StaticAnnotation
+
   type Action[A] = State[Context, A]
 
   case class Context(req: Request, params: Map[String, Seq[String]] = Map.empty, res: Response = Response())
@@ -38,7 +40,10 @@ object ScalatraService {
                 (writable: c1.Expr[Writable[A]])
                 (implicit tag: c1.WeakTypeTag[A]): c1.Expr[Unit] = {
     c1.universe.reify {
-      addRoute(path.splice, effectfully[Action, A] { action.splice }, writable.splice)
+      addRoute(path.splice, effectfully[Action, A] {
+        implicit val unapply = Unapply.unapplyMA(implicitly[Monad[Action]])
+        action.splice
+      }, writable.splice)
     }
   }
 
