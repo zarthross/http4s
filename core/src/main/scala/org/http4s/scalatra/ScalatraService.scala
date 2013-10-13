@@ -32,10 +32,13 @@ object ScalatraService {
     routes = route orElse routes
   }
 
-  def getImpl[A](c1: MContext)(path: c1.Expr[String])(action: c1.Expr[A])(writable: c1.Expr[Writable[A]]): c1.Expr[Unit] = {
-    val effectfulAction: c1.Expr[Action[A]] = effectfullyImpl[Action, A](c1)(action)
+  def getImpl[A](c1: MContext)
+                (path: c1.Expr[String])
+                (action: c1.Expr[A])
+                (writable: c1.Expr[Writable[A]])
+                (implicit tag: c1.WeakTypeTag[A]): c1.Expr[Unit] = {
     c1.universe.reify {
-      addRoute(path.splice, effectfulAction.splice, writable.splice)
+      addRoute(path.splice, effectfully[Action, A] { action.splice }, writable.splice)
     }
   }
 
