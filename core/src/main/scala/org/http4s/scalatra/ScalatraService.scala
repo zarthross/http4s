@@ -70,5 +70,5 @@ trait ScalatraService extends HttpService {
   def GET[A](path: String)(action: A)(implicit writable: Writable[A]): Unit = macro getImpl[A]
 
   def status: Status = macro statusImpl
-  def status(status: Status): Unit = macro setStatusImpl
+  def status_=(status: Status): Unit = macro setStatusImpl
 }

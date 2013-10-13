@@ -8,7 +8,7 @@ import scalaz._
 
 object ScalatraExample extends ScalatraService {
   GET("/gone") {
-    status(Status.Gone)
+    status = Status.Gone
     s"status is ${status}"
   }
 
