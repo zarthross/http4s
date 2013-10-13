@@ -4,19 +4,15 @@ package servlet
 import org.eclipse.jetty.server.Server
 import org.eclipse.jetty.servlet.{ServletHolder, ServletContextHandler}
 import javax.servlet.http.{HttpServletResponse, HttpServletRequest, HttpServlet}
-import scala.concurrent.Future
-import scalaz.concurrent.Task
-import scalaz.effect.IO
-import scalaz.Free.Trampoline
+import org.http4s.examples.ScalatraExample
 
 /**
  * @author ross
  */
 object ServletExample extends App {
 
-  import concurrent.ExecutionContext.Implicits.global
-
   val taskServlet = new Http4sServlet(new ExampleRoute().apply())
+  val scalatraServlet = new Http4sServlet(ScalatraExample)
 
   val rawServlet = new HttpServlet {
     override def service(req: HttpServletRequest, resp: HttpServletResponse) {
@@ -44,6 +40,7 @@ object ServletExample extends App {
   context.setContextPath("/")
   server.setHandler(context);
   context.addServlet(new ServletHolder(taskServlet), "/http4s/*")
+  context.addServlet(new ServletHolder(scalatraServlet), "/scalatra/*")
   context.addServlet(new ServletHolder(rawServlet), "/raw/*")
   server.start()
   server.join()
