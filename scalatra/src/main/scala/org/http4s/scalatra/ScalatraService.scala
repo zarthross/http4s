@@ -3,17 +3,12 @@ package org.http4s.scalatra
 import org.http4s._
 import scalaz.concurrent.Task
 import scala.reflect.macros.{Context => MContext}
-import scalaz._
 import effectful._
 import scala.language.experimental.macros
-import scalaz.State._
-import scala.reflect.internal.annotations.compileTimeOnly
-import scala.annotation.{TypeConstraint, StaticAnnotation}
+import scalaz.{Monad, Unapply, State}
 import org.http4s.Request
 
 object ScalatraService {
-  class unwrapped extends StaticAnnotation
-
   type Action[A] = State[Context, A]
 
   case class Context(req: Request, params: Map[String, Seq[String]] = Map.empty, res: Response = Response())
@@ -40,22 +35,19 @@ object ScalatraService {
                 (writable: c1.Expr[Writable[A]])
                 (implicit tag: c1.WeakTypeTag[A]): c1.Expr[Unit] = {
     c1.universe.reify {
-      addRoute(path.splice, effectfully[Action, A] {
-        implicit val unapply = Unapply.unapplyMA(implicitly[Monad[Action]])
-        action.splice
-      }, writable.splice)
+      addRoute(path.splice, effectfully[Action, A] { action.splice }, writable.splice)
     }
   }
 
-  def getResponse: State[Context, Response] = get[Context].map(_.res)
+  def getResponse: State[Context, Response] = State.get[Context].map(_.res)
   def transformResponse(f: Response => Response): State[Context, Unit] =
-    modify[Context](ctx => ctx.copy(res = f(ctx.res)))
+    State.modify[Context](ctx => ctx.copy(res = f(ctx.res)))
 
   def getContentType: Action[Option[ContentType]] = getResponse.map(_.contentType)
   def setContentType(contentType: ContentType): Action[Unit] =
     transformResponse(_.contentType(contentType))
 
-  def params: Action[Map[String, Seq[String]]] = get[Context].map(_.params)
+  def params: Action[Map[String, Seq[String]]] = State.get[Context].map(_.params)
   def param(name: String): Action[Option[String]] = params.map(_.get(name).flatMap(_.headOption))
 
   def getStatus: Action[Status] = getResponse.map(_.status)
