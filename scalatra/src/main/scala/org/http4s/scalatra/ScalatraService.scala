@@ -4,7 +4,7 @@ import org.http4s._
 import scalaz.concurrent.Task
 import scala.reflect.macros.{Context => MContext}
 import scalaz._
-import org.http4s.effectful._
+import effectful._
 import scala.language.experimental.macros
 import scalaz.State._
 import scala.reflect.internal.annotations.compileTimeOnly
