@@ -8,7 +8,7 @@ import scala.reflect.macros.{Context => MContext}
 package object scalatra {
   type Action[A] = State[Context, A]
 
-  trait CanUnwrap[A]
+  sealed trait CanUnwrap[A]
 
   @compileTimeOnly("FAIL")
   implicit def canUnwrapImpl[A](implicit a: A): CanUnwrap[A] = new CanUnwrap[A] {}
