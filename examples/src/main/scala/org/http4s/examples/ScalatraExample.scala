@@ -1,14 +1,21 @@
 package org.http4s.examples
 
-import org.http4s.scalatra.ScalatraService
-import org.http4s.Status
-import scalaz.{State, Monad, Unapply}
+import org.http4s._
+import org.http4s.scalatra._
 
 object ScalatraExample extends ScalatraService {
-  GET("/gone") {
+  get("/gone") {
     status = Status.Gone
-    s"status is ${status}"
+    status.reason
   }
 
-  GET("/pure") { "pure" }
+  getM("/gone2") (for {
+    _ <- setStatus(Status.Gone)
+    s <- getStatus
+  } yield s.reason)
+
+  get("/pure") { "pure" }
+
+  // Banned at compile time
+  // status
 }

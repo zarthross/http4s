@@ -7,7 +7,7 @@ description := "Core http4s framework"
 libraryDependencies <+= scalaVersion(ScalaReflect)
 
 libraryDependencies ++= Seq(
-//  Effectful,
+  Effectful,
   Junit % "test",
   Rl,
   Slf4j,
