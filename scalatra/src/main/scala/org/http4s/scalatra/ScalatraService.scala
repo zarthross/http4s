@@ -35,10 +35,9 @@ object ScalatraService {
 
     object ExtractMonad {
       val klass = rootMirror.staticPackage("org.http4s.scalatra").asModule.moduleClass.asType.toType
-      val canUnwrapSymbol = klass.member(newTermName("CanUnwrapImpl"))
+      val canUnwrapSymbol = klass.member(newTermName("canUnwrapImpl"))
       def unapply(tree: Tree): Option[Tree] = tree match {
-        // TODO should be able to compare symbols, not names
-        case Apply(TypeApply(canUnwrap, List(TypeTree())), List(monad)) =>
+        case Apply(TypeApply(canUnwrap, List(TypeTree())), List(monad)) if canUnwrap.symbol == canUnwrapSymbol =>
           Some(monad)
         case _ =>
           None
