@@ -13,6 +13,8 @@ lazy val dsl = project.dependsOn(core)
 
 lazy val examples = project.dependsOn(grizzly, netty, servlet, dsl)
 
+lazy val scalatra = project.dependsOn(core, servlet)
+
 /* common dependencies */
 libraryDependencies in ThisBuild ++= Seq(
   junit % "test",
