@@ -1,10 +1,10 @@
 package org.http4s.parser
 
-import java.nio.charset.{Charset => NioCharset, StandardCharsets}
+import java.nio.charset.{ Charset => NioCharset, StandardCharsets }
 
 import org.http4s.Uri._
 import org.http4s.util.string._
-import org.http4s.{Http4sSpec, Charset, Uri}
+import org.http4s.{ Http4sSpec, Charset, Uri }
 import org.specs2.matcher.MustThrownMatchers
 import org.specs2.mutable.Specification
 
@@ -136,16 +136,18 @@ class UriSpec extends Http4sSpec with MustThrownMatchers {
     }
 
     "deal with an invalid Query" in {
-      Uri.fromString("/hello/world?bad=enc%ode") must beRightDisjunction.like { case u =>
-        u.params must be_==(Map("bad" -> "enc"))
-        u.fragment must be_==(None)
-        u.path must be_==("/hello/world")
+      Uri.fromString("/hello/world?bad=enc%ode") must beRightDisjunction.like {
+        case u =>
+          u.params must be_==(Map("bad" -> "enc"))
+          u.fragment must be_==(None)
+          u.path must be_==("/hello/world")
       }
     }
 
     "deal with an invalid Uri" in {
-      Uri.fromString("/hello/wo%2rld") must beRightDisjunction.like { case u =>
-        u.path must be_==("/hello/wo")
+      Uri.fromString("/hello/wo%2rld") must beRightDisjunction.like {
+        case u =>
+          u.path must be_==("/hello/wo")
       }
     }
 
@@ -170,66 +172,66 @@ class UriSpec extends Http4sSpec with MustThrownMatchers {
         b = List.fill(l)("32ba").mkString(":")
       } yield (f + "::" + b))
 
-      foreach (variants) { s =>
+      foreach(variants) { s =>
         Uri(Some("http".ci), Some(Authority(host = IPv6(s.ci))), "/foo", Some("bar=baz")).toString must_==
           (s"http://[$s]/foo?bar=baz")
       }
     }
 
     "render URL with parameters" in {
-      Uri(Some("http".ci), Some(Authority(host = RegName("www.foo.com".ci))), "/foo", Some("bar=baz")).toString must_==("http://www.foo.com/foo?bar=baz")
+      Uri(Some("http".ci), Some(Authority(host = RegName("www.foo.com".ci))), "/foo", Some("bar=baz")).toString must_== ("http://www.foo.com/foo?bar=baz")
     }
 
     "render URL with port" in {
-      Uri(Some("http".ci), Some(Authority(host = RegName("www.foo.com".ci), port = Some(80)))).toString must_==("http://www.foo.com:80")
+      Uri(Some("http".ci), Some(Authority(host = RegName("www.foo.com".ci), port = Some(80)))).toString must_== ("http://www.foo.com:80")
     }
 
     "render URL without port" in {
-      Uri(Some("http".ci), Some(Authority(host = RegName("www.foo.com".ci)))).toString must_==("http://www.foo.com")
+      Uri(Some("http".ci), Some(Authority(host = RegName("www.foo.com".ci)))).toString must_== ("http://www.foo.com")
     }
 
     "render IPv4 URL with parameters" in {
-      Uri(Some("http".ci), Some(Authority(host = IPv4("192.168.1.1".ci), port = Some(80))), "/c", Some("GB=object&Class=one")).toString must_==("http://192.168.1.1:80/c?GB=object&Class=one")
+      Uri(Some("http".ci), Some(Authority(host = IPv4("192.168.1.1".ci), port = Some(80))), "/c", Some("GB=object&Class=one")).toString must_== ("http://192.168.1.1:80/c?GB=object&Class=one")
     }
 
     "render IPv4 URL with port" in {
-      Uri(Some("http".ci), Some(Authority(host = IPv4("192.168.1.1".ci), port = Some(8080)))).toString must_==("http://192.168.1.1:8080")
+      Uri(Some("http".ci), Some(Authority(host = IPv4("192.168.1.1".ci), port = Some(8080)))).toString must_== ("http://192.168.1.1:8080")
     }
 
     "render IPv4 URL without port" in {
-      Uri(Some("http".ci), Some(Authority(host = IPv4("192.168.1.1".ci)))).toString must_==("http://192.168.1.1")
+      Uri(Some("http".ci), Some(Authority(host = IPv4("192.168.1.1".ci)))).toString must_== ("http://192.168.1.1")
     }
 
     "render IPv6 URL with parameters" in {
-      Uri(Some("http".ci), Some(Authority(host = IPv6("2001:db8::7".ci))), "/c", Some("GB=object&Class=one")).toString must_==("http://[2001:db8::7]/c?GB=object&Class=one")
+      Uri(Some("http".ci), Some(Authority(host = IPv6("2001:db8::7".ci))), "/c", Some("GB=object&Class=one")).toString must_== ("http://[2001:db8::7]/c?GB=object&Class=one")
     }
 
     "render IPv6 URL with port" in {
-      Uri(Some("http".ci), Some(Authority(host = IPv6("2001:0db8:85a3:08d3:1319:8a2e:0370:7344".ci), port = Some(8080)))).toString must_==("http://[2001:0db8:85a3:08d3:1319:8a2e:0370:7344]:8080")
+      Uri(Some("http".ci), Some(Authority(host = IPv6("2001:0db8:85a3:08d3:1319:8a2e:0370:7344".ci), port = Some(8080)))).toString must_== ("http://[2001:0db8:85a3:08d3:1319:8a2e:0370:7344]:8080")
     }
 
     "render IPv6 URL without port" in {
-      Uri(Some("http".ci), Some(Authority(host = IPv6("2001:0db8:85a3:08d3:1319:8a2e:0370:7344".ci)))).toString must_==("http://[2001:0db8:85a3:08d3:1319:8a2e:0370:7344]")
+      Uri(Some("http".ci), Some(Authority(host = IPv6("2001:0db8:85a3:08d3:1319:8a2e:0370:7344".ci)))).toString must_== ("http://[2001:0db8:85a3:08d3:1319:8a2e:0370:7344]")
     }
 
     "render email address" in {
-      Uri(Some("mailto".ci), path = "John.Doe@example.com").toString must_==("mailto:John.Doe@example.com")
+      Uri(Some("mailto".ci), path = "John.Doe@example.com").toString must_== ("mailto:John.Doe@example.com")
     }
 
     "render an URL with username and password" in {
-      Uri(Some("http".ci), Some(Authority(Some("username:password"), RegName("some.example.com"), None)), "/", None, None).toString must_==("http://username:password@some.example.com")
+      Uri(Some("http".ci), Some(Authority(Some("username:password"), RegName("some.example.com"), None)), "/", None, None).toString must_== ("http://username:password@some.example.com")
     }
 
     "render an URL with username and password, path and params" in {
-      Uri(Some("http".ci), Some(Authority(Some("username:password"), RegName("some.example.com"), None)), "/some/path", Some("param1=5&param-without-value"), None).toString  must_==("http://username:password@some.example.com/some/path?param1=5&param-without-value")
+      Uri(Some("http".ci), Some(Authority(Some("username:password"), RegName("some.example.com"), None)), "/some/path", Some("param1=5&param-without-value"), None).toString must_== ("http://username:password@some.example.com/some/path?param1=5&param-without-value")
     }
 
     "render relative URI with empty query string" in {
-      Uri(path = "/", query = Some(""), fragment = None).toString must_==("/?")
+      Uri(path = "/", query = Some(""), fragment = None).toString must_== ("/?")
     }
 
     "render relative URI with empty query string and fragment" in {
-      Uri(path = "/", query = Some(""), fragment = Some("")).toString must_==("/?#")
+      Uri(path = "/", query = Some(""), fragment = Some("")).toString must_== ("/?#")
     }
 
     "render relative URI with empty fragment" in {
@@ -237,31 +239,31 @@ class UriSpec extends Http4sSpec with MustThrownMatchers {
     }
 
     "render relative path with fragment" in {
-      Uri(path = "/foo/bar", fragment = Some("an-anchor")).toString must_==("/foo/bar#an-anchor")
+      Uri(path = "/foo/bar", fragment = Some("an-anchor")).toString must_== ("/foo/bar#an-anchor")
     }
 
     "render relative path with parameters" in {
-      Uri(path = "/foo/bar", query = Some("foo=bar&ding=dong")).toString must_==("/foo/bar?foo=bar&ding=dong")
+      Uri(path = "/foo/bar", query = Some("foo=bar&ding=dong")).toString must_== ("/foo/bar?foo=bar&ding=dong")
     }
 
     "render relative path with parameters and fragment" in {
-      Uri(path = "/foo/bar", query = Some("foo=bar&ding=dong"), fragment = Some("an_anchor")).toString must_==("/foo/bar?foo=bar&ding=dong#an_anchor")
+      Uri(path = "/foo/bar", query = Some("foo=bar&ding=dong"), fragment = Some("an_anchor")).toString must_== ("/foo/bar?foo=bar&ding=dong#an_anchor")
     }
 
     "render relative path without parameters" in {
-      Uri(path = "/foo/bar").toString must_==("/foo/bar")
+      Uri(path = "/foo/bar").toString must_== ("/foo/bar")
     }
 
     "render relative root path without parameters" in {
-      Uri(path = "/").toString must_==("/")
+      Uri(path = "/").toString must_== ("/")
     }
 
     "render a query string with a single param" in {
-      Uri(query = Some("param1=test")).toString must_==("/?param1=test")
+      Uri(query = Some("param1=test")).toString must_== ("/?param1=test")
     }
 
     "render a query string with multiple value in a param" in {
-      Uri(query = Some("param1=3&param2=2&param2=foo")).toString must_==("/?param1=3&param2=2&param2=foo")
+      Uri(query = Some("param1=3&param2=2&param2=foo")).toString must_== ("/?param1=3&param2=2&param2=foo")
     }
 
     "round trip over URI examples from wikipedia" in {
@@ -300,7 +302,7 @@ class UriSpec extends Http4sSpec with MustThrownMatchers {
         "crid://broadcaster.com/movies/BestActionMovieEver",
         "http://example.org/absolute/URI/with/absolute/path/to/resource.txt",
         "/relative/URI/with/absolute/path/to/resource.txt")
-      foreach (examples) { e =>
+      foreach(examples) { e =>
         Uri.fromString(e) must beRightDisjunction.like { case u => u.toString must be_==(e) }
       }
     }
@@ -327,16 +329,16 @@ class UriSpec extends Http4sSpec with MustThrownMatchers {
       Uri(query = Some("param1")).multiParams must be_==(Map("param1" -> Nil))
     }
     "parse many parameter with value" in {
-      Uri(query = Some("param1=value&param2=value1&param2=value2&param3=value")).multiParams must_==(Map(
-          "param1" -> List("value"),
-          "param2" -> List("value1", "value2"),
-          "param3" -> List("value")))
+      Uri(query = Some("param1=value&param2=value1&param2=value2&param3=value")).multiParams must_== (Map(
+        "param1" -> List("value"),
+        "param2" -> List("value1", "value2"),
+        "param3" -> List("value")))
     }
     "parse many parameter without value" in {
-      Uri(query = Some("param1&param2&param3")).multiParams must_==(Map(
-          "param1" -> Nil,
-          "param2" -> Nil,
-          "param3" -> Nil))
+      Uri(query = Some("param1&param2&param3")).multiParams must_== (Map(
+        "param1" -> Nil,
+        "param2" -> Nil,
+        "param3" -> Nil))
     }
   }
 
@@ -376,12 +378,12 @@ class UriSpec extends Http4sSpec with MustThrownMatchers {
 
   "Uri.params.iterate" should {
     "work on an URI without a query" in {
-      foreach (Uri(query = None).params.iterator) { i =>
+      foreach(Uri(query = None).params.iterator) { i =>
         throw new Error(s"should not have $i") // should not happen
       }
     }
     "work on empty list" in {
-      foreach (Uri(query = Some("")).params.iterator) { i =>
+      foreach(Uri(query = Some("")).params.iterator) { i =>
         throw new Error(s"should not have $i") // should not happen
       }
     }
@@ -389,14 +391,14 @@ class UriSpec extends Http4sSpec with MustThrownMatchers {
       val u = Uri(query = Some("=value1&=value2&=&"))
       val i = u.params.iterator
       i.next must be_==("" -> "value1")
-      i.next must throwA [NoSuchElementException]
+      i.next must throwA[NoSuchElementException]
     }
     "work on non-empty query string" in {
       val u = Uri(query = Some("param1=value1&param1=value2&param1=value3&param2=value4&param2=value5"))
       val i = u.params.iterator
       i.next must be_==("param1" -> "value1")
       i.next must be_==("param2" -> "value4")
-      i.next must throwA [NoSuchElementException]
+      i.next must throwA[NoSuchElementException]
     }
   }
 
@@ -418,33 +420,33 @@ class UriSpec extends Http4sSpec with MustThrownMatchers {
     }
     "find first value of parameter with empty key" in {
       Uri(query = Some("=value1&=value2")).multiParams must_== (
-          Map("" -> Seq("value1", "value2")))
+        Map("" -> Seq("value1", "value2")))
       Uri(query = Some("&=value1&=value2")).multiParams must_== (
-          Map("" -> Seq("value1", "value2")))
+        Map("" -> Seq("value1", "value2")))
       Uri(query = Some("&&&=value1&&&=value2&=&")).multiParams must_== (
-          Map("" -> Seq("value1", "value2", "")))
+        Map("" -> Seq("value1", "value2", "")))
     }
     "find parameter with empty key and without value" in {
-      Uri(query = Some("&")).multiParams must_==(Map("" -> Seq()))
-      Uri(query = Some("&&")).multiParams must_==(Map("" -> Seq()))
-      Uri(query = Some("&&&")).multiParams must_==(Map("" -> Seq()))
+      Uri(query = Some("&")).multiParams must_== (Map("" -> Seq()))
+      Uri(query = Some("&&")).multiParams must_== (Map("" -> Seq()))
+      Uri(query = Some("&&&")).multiParams must_== (Map("" -> Seq()))
     }
     "find parameter with an empty value" in {
-      Uri(query = Some("param1=")).multiParams must_==(Map("param1" -> Seq("")))
+      Uri(query = Some("param1=")).multiParams must_== (Map("param1" -> Seq("")))
       Uri(query = Some("param1=&param2=")).multiParams must_== (Map("param1" -> Seq(""), "param2" -> Seq("")))
     }
     "find parameter with single value" in {
-      Uri(query = Some("param1=value1&param2=value2")).multiParams must_==(
-          Map(
-            "param1" -> Seq("value1"),
-            "param2" -> Seq("value2")))
+      Uri(query = Some("param1=value1&param2=value2")).multiParams must_== (
+        Map(
+          "param1" -> Seq("value1"),
+          "param2" -> Seq("value2")))
     }
     "find parameter without value" in {
-      Uri(query = Some("param1&param2&param3")).multiParams must_==(
-          Map(
-            "param1" -> Seq(),
-            "param2" -> Seq(),
-            "param3" -> Seq()))
+      Uri(query = Some("param1&param2&param3")).multiParams must_== (
+        Map(
+          "param1" -> Seq(),
+          "param2" -> Seq(),
+          "param3" -> Seq()))
     }
   }
 
@@ -627,6 +629,16 @@ class UriSpec extends Http4sSpec with MustThrownMatchers {
       val u = Uri(query = Some("param=value"))
       u =? ps must be_==(u =? ps)
     }
+  }
+
+  "UriLiterals" should {
+    import org.http4s.UriLiterals._
+    "verify during compile-time an URI string" in {
+      uri"/?param" must be_==(Uri(query = Some("param")))
+    }
+    //    "an empty URI does not compile" in {
+    //      uri"" does not compile
+    //    }
   }
 
 }

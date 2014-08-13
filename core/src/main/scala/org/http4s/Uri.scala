@@ -2,16 +2,13 @@ package org.http4s
 
 import java.nio.charset.StandardCharsets
 
-import scala.language.experimental.macros
-import scala.reflect.macros.Context
-
 import Uri._
 
 import scala.collection.{ immutable, mutable }
 import mutable.ListBuffer
 import scala.util.Try
 
-import org.http4s.parser.{ScalazDeliverySchemes, QueryParser, RequestUriParser}
+import org.http4s.parser.{ ScalazDeliverySchemes, QueryParser, RequestUriParser }
 import org.http4s.util.CaseInsensitiveString
 import org.http4s.util.string.ToCaseInsensitiveStringSyntax
 
@@ -193,22 +190,7 @@ case class Uri(
 
 }
 
-object Uri extends UriFunctions {
-  object macros {
-    def uriLiteral(c: Context)(s: c.Expr[String]): c.Expr[Uri] = {
-      import c.universe._
-
-      s.tree match {
-        case Literal(Constant(s: String)) =>
-          Uri.fromString(s).fold(
-            e => c.abort(c.enclosingPosition, e.details),
-            qValue => c.Expr(q"Uri.fromString(${s}).valueOr(e => throw new ParseException(e))")
-          )
-        case _ =>
-          c.abort(c.enclosingPosition, s"only supports literal Strings")
-      }
-    }
-  }
+object Uri {
 
   def fromString(s: String): ParseResult[Uri] = (new RequestUriParser(s, StandardCharsets.UTF_8)).RequestUri
     .run()(ScalazDeliverySchemes.Disjunction)
@@ -224,8 +206,8 @@ object Uri extends UriFunctions {
   sealed trait Host {
     final def value: String = this match {
       case RegName(h) => h.toString
-      case IPv4(a)    => a.toString
-      case IPv6(a)    => a.toString
+      case IPv4(a) => a.toString
+      case IPv6(a) => a.toString
     }
   }
   case class RegName(host: CaseInsensitiveString) extends Host
@@ -336,10 +318,31 @@ object Uri extends UriFunctions {
   }
 }
 
-trait UriFunctions {
-  /**
-   * Literal syntax for URIs.  Invalid or non-literal arguments are rejected
-   * at compile time.
-   */
-  def uri(s: String): Uri = macro Uri.macros.uriLiteral
+object UriLiterals {
+  import scala.language.experimental.macros
+  import scala.reflect.macros.Context
+
+  implicit class UriContext(val sc: StringContext) extends AnyVal {
+    def uri() = macro uriImpl
+  }
+
+  private def isUri(s: String): Boolean = {
+    Uri.fromString(s).fold(l => false, r => true)
+  }
+
+  def uriImpl(c: reflect.macros.Context)(): c.Expr[Uri] = {
+    import c.universe._
+
+    val uriExpr = c.prefix.tree match {
+      case Apply(_, Apply(_, List(u @ Literal(Constant(s: String)))) :: Nil) if s.nonEmpty && isUri(s) => c.Expr(u)
+      case _ => c.abort(c.enclosingPosition, "Invalid URI!")
+    }
+
+    reify(Uri.fromString(uriExpr.splice).fold(
+      // never be in this case since we check before
+      l => throw new Error("Invalid URI!"),
+      // always runs this case
+      r => r))
+  }
+
 }
