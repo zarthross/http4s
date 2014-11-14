@@ -97,6 +97,7 @@ scalacOptions in ThisBuild ++= Seq(
   "-language:higherKinds",
   s"-target:jvm-${JvmTarget}",
   "-unchecked",
+//  "-Xdivergence211",
   "-Xlint"
 )
 

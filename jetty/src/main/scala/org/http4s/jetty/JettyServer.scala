@@ -1,18 +1,20 @@
 package org.http4s
 package jetty
 
-import javax.servlet.http.HttpServlet
 import org.eclipse.jetty.server.{Server => JServer, ServerConnector}
 import org.eclipse.jetty.servlet.{ServletHolder, ServletContextHandler}
-import org.http4s.server.HasIdleTimeout
+import org.http4s.server.{Server, ServerConfig}
+import org.http4s.server.ServerConfig._
 import org.log4s.getLogger
 import scala.concurrent.duration.Duration
+import scalaz.Free
 import scalaz.concurrent.Task
-import org.http4s.servlet.{ServletContainer, ServletContainerBuilder}
+import org.http4s.servlet.Http4sServlet
 import org.eclipse.jetty.util.component.AbstractLifeCycle.AbstractLifeCycleListener
 import org.eclipse.jetty.util.component.LifeCycle
+import org.log4s.getLogger
 
-class JettyServer private[jetty] (server: JServer) extends ServletContainer {
+class JettyServer private[jetty] (server: JServer) extends Server {
   private[this] val logger = getLogger
 
   def start: Task[this.type] = Task.delay {
@@ -39,48 +41,54 @@ class JettyServer private[jetty] (server: JServer) extends ServletContainer {
 }
 
 object JettyServer {
-  class Builder extends ServletContainerBuilder with HasIdleTimeout {
-    type To = JettyServer
+  def apply(config: Free[ServerConfig, Unit]): JettyServer = {
+    val server = new JServer()
+    var port = 8080
+    var host = "0.0.0.0"
+    var idleTimeout: Duration = Duration.Inf
+    var asyncTimeout: Duration = Duration.Inf
+    var mounts: Vector[MountService[_]] = Vector.empty
 
-    private val server = new JServer()
-    private var port = 8080
-    private var host = "0.0.0.0"
-    private var timeout: Duration = Duration.Inf
-
-    override def withPort(port: Int): this.type = {
-      this.port = port
-      this
+    config.go {
+      case SetPort(p, next) =>
+        port = p
+        next
+      case SetHost(h, next) =>
+        host = h
+        next
+      case SetNio2(useNio2, next) =>
+        // noop
+        next
+      case SetIdleTimeout(timeout, next) =>
+        idleTimeout = timeout
+        next
+      case SetAsyncTimeout(timeout, next) =>
+        asyncTimeout = timeout
+        next
+      case SetConnectionTimeout(timeout, next) =>
+        // noop
+        next
+      case mount @ MountService(service, prefix, executor, next) =>
+        mounts :+= mount
+        next
     }
 
-    override def withHost(host: String): this.type = {
-      this.host = host
-      this
-    }
-
-    private val context = new ServletContextHandler()
+    val context = new ServletContextHandler()
     context.setContextPath("/")
     server.setHandler(context)
 
-    def build: To = {
-      val connector = new ServerConnector(server)
-      connector.setHost(host)
-      connector.setPort(port)
-      server.addConnector(connector)
-      val dur = if (timeout.isFinite) timeout.toMillis else -1
-      connector.setIdleTimeout(dur)  // timeout <= 0 => infinite
-      new JettyServer(server)
+    val connector = new ServerConnector(server)
+    connector.setHost(host)
+    connector.setPort(port)
+    connector.setIdleTimeout(if (idleTimeout.isFinite) idleTimeout.toMillis else -1)
+
+    for ((mount, i) <- mounts.zipWithIndex) {
+      val servlet = new Http4sServlet(mount.service, asyncTimeout = asyncTimeout, threadPool = mount.executor)
+      val servletName = s"http4s-servlet-$i"
+      context.addServlet(new ServletHolder(servletName, servlet), s"${mount.prefix}/*")
     }
 
-    def mountServlet(servlet: HttpServlet, urlMapping: String): this.type = {
-      context.addServlet(new ServletHolder(defaultServletName(servlet), servlet), urlMapping)
-      this
-    }
-
-    def withIdleTimeout(timeout: Duration): this.type = {
-      this.timeout = timeout
-      this
-    }
+    server.addConnector(connector)
+    new JettyServer(server)
   }
-
-  def newBuilder: Builder = new Builder
 }
