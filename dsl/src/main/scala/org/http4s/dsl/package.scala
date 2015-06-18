@@ -3,6 +3,18 @@ package org.http4s
 import org.http4s.dsl.impl._
 
 package object dsl extends Http4s {
+  implicit class PathContext(sc: StringContext) {
+    val GET = new RequestMatcher(Method.GET, sc)
+    val HEAD = new RequestMatcher(Method.HEAD, sc)
+    val POST = new RequestMatcher(Method.POST, sc)
+    val PUT = new RequestMatcher(Method.PUT, sc)
+    val DELETE = new RequestMatcher(Method.DELETE, sc)
+    val CONNECT = new RequestMatcher(Method.CONNECT, sc)
+    val OPTIONS = new RequestMatcher(Method.OPTIONS, sc)
+    val TRACE = new RequestMatcher(Method.TRACE, sc)
+    val PATCH = new RequestMatcher(Method.PATCH, sc)
+    val path = new PathMatcher(sc)
+  }
 
   val GET: Method.GET.type = Method.GET
   val HEAD: Method.HEAD.type = Method.HEAD

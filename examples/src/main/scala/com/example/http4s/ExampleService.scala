@@ -31,65 +31,71 @@ object ExampleService {
 
   def service1(implicit executionContext: ExecutionContext) = HttpService {
 
-    case req @ GET -> Root =>
+    case GET"/" =>
       // Supports Play Framework template -- see src/main/twirl.
       Ok(html.index())
 
-    case _ -> Root =>
+    case path"/" =>
       // The default route result is NotFound. Sometimes MethodNotAllowed is more appropriate.
       MethodNotAllowed()
 
-    case GET -> Root / "ping" =>
+    case GET"/ping" =>
       // EntityEncoder allows for easy conversion of types to a response body
       Ok("pong")
 
-    case GET -> Root / "future" =>
+    case GET"/hello/$name" =>
+      Ok(name)
+
+    case GET"/add/${IntVar(x)}/${IntVar(y)}" =>
+      Ok((x + y).toString)
+
+    case GET"/future" =>
       // EntityEncoder allows rendering asynchronous results as well
       Ok(Future("Hello from the future!"))
 
-    case GET -> Root / "streaming" =>
+    case GET"/streaming" =>
       // Its also easy to stream responses to clients
       Ok(dataStream(100)).withHeaders(`Transfer-Encoding`(TransferCoding.chunked))
 
-    case req @ GET -> Root / "ip" =>
+    case req @ GET"/ip" =>
       // Its possible to define an EntityEncoder anywhere so you're not limited to built in types
       val json = jSingleObject("origin", jString(req.remoteAddr.getOrElse("unknown")))
       Ok(json)
 
-    case req @ GET -> Root / "redirect" =>
+    case GET"/redirect" =>
       // Not every response must be Ok using a EntityEncoder: some have meaning only for specific types
       TemporaryRedirect(uri("/http4s/"))
 
-    case GET -> Root / "content-change" =>
+    case GET"/content-change" =>
       // EntityEncoder typically deals with appropriate headers, but they can be overridden
       Ok("<h2>This will have an html content type!</h2>")
           .withHeaders(`Content-Type`(`text/html`))
 
-    case req @ GET -> "static" /: path =>
-      // captures everything after "/directory" into `path`
-      // Try http://localhost:8080/http4s/nasa_blackhole_image.jpg
+    case req @ GET"/static/$tail*" =>
+      // captures everything after "/static" into `tail`
+      // Try http://localhost:8080/http4s/static/nasa_blackhole_image.jpg
       // See also org.http4s.server.staticcontent to create a mountable service for static content
-      StaticFile.fromResource(path.toString, Some(req)).fold(NotFound())(Task.now)
+      StaticFile.fromResource(s"/$tail", Some(req)).fold(NotFound())(Task.now)
 
     ///////////////////////////////////////////////////////////////
     //////////////// Dealing with the message body ////////////////
-    case req @ POST -> Root / "echo" =>
+    case req @ POST"/echo" =>
       // The body can be used in the response
       Ok(req.body)
         .withHeaders(`Content-Type`(`text/plain`), `Transfer-Encoding`(TransferCoding.chunked))
 
-    case req @ GET -> Root / "echo" =>
+    case GET"/echo" =>
       Ok(html.submissionForm("echo data"))
 
-    case req @ POST -> Root / "echo2" =>
+    case req @ POST"/echo2" =>
       // Even more useful, the body can be transformed in the response
       Ok(req.body.map(_.drop(6)))
         .withHeaders(`Content-Type`(`text/plain`))
 
-    case req @ GET -> Root / "echo2" =>
+    case GET"/echo2" =>
       Ok(html.submissionForm("echo data"))
 
-    case req @ POST -> Root / "sum"  =>
+    case req @ POST"/sum"  =>
       // EntityDecoders allow turning the body into something useful
       req.decode[UrlForm] { data => 
         data.values.get("sum") match {
@@ -103,15 +109,15 @@ object ExampleService {
         case e: NumberFormatException => BadRequest("Not an int: " + e.getMessage)
       }
 
-    case req @ GET -> Root / "sum" =>
+    case GET"/sum" =>
       Ok(html.submissionForm("sum"))
 
     ///////////////////////////////////////////////////////////////
     //////////////// Form encoding example ////////////////////////
-    case req @ GET -> Root / "form-encoded" =>
+    case req @ GET"/form-encoded" =>
       Ok(html.formEncoded())
 
-    case req @ POST -> Root / "form-encoded" =>
+    case req @ POST"/form-encoded" =>
       // EntityDecoders return a Task[A] which is easy to sequence
       req.decode[UrlForm] { m =>
         val s = m.values.mkString("\n")
@@ -120,14 +126,14 @@ object ExampleService {
 
     ///////////////////////////////////////////////////////////////
     //////////////////////// Server Push //////////////////////////
-    case req @ GET -> Root / "push" =>
+    case req @ GET"/push" =>
       // http4s intends to be a forward looking library made with http2.0 in mind
       val data = <html><body><img src="image.jpg"/></body></html>
       Ok(data)
         .withHeaders(`Content-Type`(`text/html`))
         .push("/image.jpg")(req)
 
-    case req @ GET -> Root / "image.jpg" =>
+    case req @ GET"/image.jpg" =>
       StaticFile.fromResource("/nasa_blackhole_image.jpg", Some(req))
         .map(Task.now)
         .getOrElse(NotFound())
@@ -135,7 +141,7 @@ object ExampleService {
 
   // Services don't have to be monolithic, and middleware just transforms a service to a service
   def service2 = EntityLimiter(HttpService {
-    case req @ POST -> Root / "short-sum"  =>
+    case req @ POST"/short-sum"  =>
       req.decode[UrlForm] { data =>
         data.values.get("short-sum") match {
           case Some(Seq(s, _*)) =>
@@ -148,7 +154,7 @@ object ExampleService {
         case EntityTooLarge(max) => PayloadTooLarge(s"Entity too large. Max size: $max")
       }
 
-    case req @ GET -> Root / "short-sum" =>
+    case GET"/short-sum" =>
       Ok(html.submissionForm("short-sum"))
   }, 3)
 
@@ -172,7 +178,7 @@ object ExampleService {
   val digest = new DigestAuthentication(realm, auth_store)
 
   def service3 = digest( HttpService { 
-    case req @ GET -> Root / "protected" => {
+    case req @ GET"/protected" => {
       (req.attributes.get(authenticatedUser), req.attributes.get(authenticatedRealm)) match {
         case (Some(user), Some(realm)) => 
           Ok("This page is protected using HTTP authentication; logged in user/realm: " + user + "/" + realm)

@@ -25,40 +25,41 @@ object ScienceExperiments {
 
   def service = HttpService {
     ///////////////// Misc //////////////////////
-    case req @ POST -> Root / "root-element-name" =>
+    case req @ POST"/root-element-name" =>
       req.decode { root: Elem => Ok(root.label) }
 
-    case req @ GET -> Root / "date" =>
+    case req @ GET"/date" =>
       val date = DateTime(100)
       Ok(date.toRfc1123DateTimeString)
         .withHeaders(Date(date))
 
-    case req @ GET -> Root / "echo-headers" =>
+    case req @ GET"/echo-headers" =>
       Ok(req.headers.mkString("\n"))
 
     ///////////////// Massive Data Loads //////////////////////
-    case GET -> Root / "bigstring" =>
+    case GET"/bigstring" =>
       Ok((0 until 1000).map(i => s"This is string number $i").mkString("\n"))
 
-    case req@GET -> Root / "bigstring2" =>
+    case GET"/bigstring2" =>
       Ok(Process.range(0, 1000).map(i => s"This is string number $i"))
 
-    case req@GET -> Root / "bigstring3" => Ok(flatBigString)
+    case GET"/bigstring3" =>
+      Ok(flatBigString)
 
-    case GET -> Root / "zero-chunk" =>
+    case GET"/zero-chunk" =>
       Ok(Process("", "foo!")).withHeaders(`Transfer-Encoding`(TransferCoding.chunked))
 
-    case GET -> Root / "bigfile" =>
+    case GET"/bigfile" =>
       val size = 40*1024*1024   // 40 MB
       Ok(new Array[Byte](size))
 
-    case req @ POST -> Root / "rawecho" =>
+    case req @ POST"/rawecho" =>
       // The body can be used in the response
       Ok(req.body).withHeaders(`Transfer-Encoding`(TransferCoding.chunked))
 
     ///////////////// Switch the response based on head of content //////////////////////
 
-    case req@POST -> Root / "challenge1" =>
+    case req @ POST"/challenge1" =>
       val body = req.body.map { c => new String(c.toArray, req.charset.getOrElse(Charset.`ISO-8859-1`).nioCharset)}
       def notGo = emit("Booo!!!")
       Ok {
@@ -72,7 +73,7 @@ object ScienceExperiments {
         }
       }
 
-    case req @ POST -> Root / "challenge2" =>
+    case req @ POST"/challenge2" =>
       val parser = await1[ByteVector] map {
         case bits if (new String(bits.toArray, req.charset.getOrElse(Charset.`ISO-8859-1`).nioCharset)).startsWith("Go") =>
           Task.now(Response(body = emit(bits) ++ req.body))
@@ -95,19 +96,19 @@ object ScienceExperiments {
     */
 
     ///////////////// Weird Route Failures //////////////////////
-    case req @ GET -> Root / "hanging-body" =>
+    case GET"/hanging-body" =>
       Ok(Process(Task.now(ByteVector(Seq(' '.toByte))), Task.async[ByteVector] { cb => /* hang */}).eval)
         .withHeaders(`Transfer-Encoding`(TransferCoding.chunked))
 
-    case req @ GET -> Root / "broken-body" =>
+    case GET"/broken-body" =>
       Ok(Process(Task{"Hello "}) ++ Process(Task{sys.error("Boom!")}) ++ Process(Task{"world!"}))
 
-    case req @ GET -> Root / "slow-body" =>
+    case GET"/slow-body" =>
       val resp = "Hello world!".map(_.toString())
       val body = awakeEvery(2.seconds).zipWith(Process.emitAll(resp))((_, c) => c)
       Ok(body).withHeaders(`Transfer-Encoding`(TransferCoding.chunked))
 
-    case req @ POST -> Root / "ill-advised-echo" =>
+    case req @ POST"/ill-advised-echo" =>
       // Reads concurrently from the input.  Don't do this at home.
       implicit val byteVectorMonoidInstance: Monoid[ByteVector] = Monoid.instance(_ ++ _, ByteVector.empty)
       val tasks = (1 to Runtime.getRuntime.availableProcessors).map(_ => req.body.foldMonoid.runLastOr(ByteVector.empty))
