@@ -117,6 +117,24 @@ lazy val theDsl = libraryProject("dsl")
   )
   .dependsOn(core % "compile;test->test")
 
+lazy val rhoCore = rhoProject("rho-core")
+  .settings(
+    description := "A self-documenting DSL built on http4s"
+  )
+  .dependsOn(server)
+
+lazy val rhoHal = rhoProject("rho-hal")
+  .settings(
+    description := "JSON HAL support for rho"
+  )
+  .dependsOn(rhoCore)
+
+lazy val rhoSwagger = rhoProject("rho-swagger")
+  .settings(
+    description := "Swagger support for rho"
+  )
+  .dependsOn(rhoCore % "compile;test->test")
+
 lazy val jawn = libraryProject("jawn")
   .settings(
     description := "Base library to parse JSON to various ASTs for http4s",
@@ -175,7 +193,7 @@ lazy val scalaXml = libraryProject("scala-xml")
   )
   .dependsOn(core % "compile;test->test")
 
-lazy val twirl = http4sProject("twirl")
+lazy val twirl = libraryProject("twirl")
   .settings(
     description := "Twirl template support for http4s",
     libraryDependencies += twirlApi
@@ -183,7 +201,7 @@ lazy val twirl = http4sProject("twirl")
   .enablePlugins(SbtTwirl)
   .dependsOn(core % "compile;test->test")
 
-lazy val bench = http4sProject("bench")
+lazy val bench = commonProject("bench")
   .enablePlugins(JmhPlugin)
   .settings(noPublishSettings)
   .settings(noCoverageSettings)
@@ -192,7 +210,7 @@ lazy val bench = http4sProject("bench")
   )
   .dependsOn(core)
 
-lazy val loadTest = http4sProject("load-test")
+lazy val loadTest = commonProject("load-test")
   .settings(noPublishSettings)
   .settings(noCoverageSettings)
   .settings(
@@ -204,7 +222,7 @@ lazy val loadTest = http4sProject("load-test")
   )
   .enablePlugins(GatlingPlugin)
 
-lazy val docs = http4sProject("docs")
+lazy val docs = commonProject("docs")
   .settings(noPublishSettings)
   .settings(noCoverageSettings)
   .settings(unidocSettings)
@@ -251,7 +269,7 @@ lazy val docs = http4sProject("docs")
   )
   .dependsOn(client, core, theDsl, blazeServer, blazeClient, argonaut)
 
-lazy val examples = http4sProject("examples")
+lazy val examples = commonProject("examples")
   .settings(noPublishSettings)
   .settings(noCoverageSettings)
   .settings(
@@ -264,6 +282,17 @@ lazy val examples = http4sProject("examples")
   )
   .dependsOn(server, theDsl, circe, scalaXml, twirl)
   .enablePlugins(SbtTwirl)
+
+lazy val examplesRho = exampleProject("examples-rho")
+  .settings(Revolver.settings)
+  .settings(
+    description := "Examples of the rho DSL",
+    libraryDependencies ++= Seq(
+      logbackClassic % "runtime",
+      uadetectorResources
+    )
+  )
+  .dependsOn(rhoSwagger, rhoHal, scalaXml, json4sJackson)
 
 lazy val examplesBlaze = exampleProject("examples-blaze")
   .settings(Revolver.settings)
@@ -314,19 +343,29 @@ lazy val examplesWar = exampleProject("examples-war")
   )
   .dependsOn(servlet)
 
-def http4sProject(name: String) = Project(name, file(name))
+
+def commonProject(name: String) = Project(name, file(name))
+  .settings(commonSettings)
   .settings(commonSettings)
   .settings(projectMetadata)
   .settings(publishSettings)
   .settings(
-    moduleName := s"http4s-$name",
     testOptions in Test += Tests.Argument(TestFrameworks.Specs2,"xonly", "failtrace")
   )
 
-def libraryProject(name: String) = http4sProject(name)
+def libraryProject(name: String) = commonProject(name)
   .settings(mimaSettings)
+  .settings(
+    moduleName := s"http4s-$name"
+  )
 
-def exampleProject(name: String) = http4sProject(name)
+def rhoProject(name: String) = libraryProject(name)
+  .in(file(name.replace("rho-", "rho/")))
+  .settings(
+    moduleName := name
+  )
+
+def exampleProject(name: String) = libraryProject(name)
   .in(file(name.replace("examples-", "examples/")))
   .settings(noPublishSettings)
   .settings(noCoverageSettings)

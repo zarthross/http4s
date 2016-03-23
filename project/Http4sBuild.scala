@@ -106,4 +106,5 @@ object Http4sBuild extends Build {
   lazy val tomcatCatalina      = "org.apache.tomcat"         % "tomcat-catalina"         % "8.0.32"
   lazy val tomcatCoyote        = "org.apache.tomcat"         % "tomcat-coyote"           % tomcatCatalina.revision
   lazy val twirlApi            = "com.typesafe.play"        %% "twirl-api"               % "1.1.1"
+  lazy val uadetectorResources = "net.sf.uadetector"         % "uadetector-resources"    % "2014.09"
 }
