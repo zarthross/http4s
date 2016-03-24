@@ -37,11 +37,11 @@ class ApiExamples extends Specification {
       new RhoService {
         // Use combinators to parse and capture path parameters
         GET / "helloworldnumber" / pathVar[Int] / "foo" |>> { i: Int =>
-          Ok("Received $i")
+          Ok(s"Received $i")
         }
         // the symbol 'world just says 'capture a String' with variable name "world"
         GET / "helloworldstring" / 'world / "foo" |>> { i: String =>
-          Ok("Received $i")
+          Ok(s"Received $i")
         }
       }
       /// end_src_inlined
@@ -106,12 +106,12 @@ class ApiExamples extends Specification {
         val path2 = "two" / pathVar[Int]
 
         val getLength = captureMap(`Content-Length`)(_.length)
-        val getTag = captureMap(ETag)(_ => -1)
+        val getTag = captureMap(ETag)(_ => -1L)
 
         GET / (path1 || path2) +?
             param[String]("foo") >>>
             (getLength || getTag) |>> {
-          (i: Int, foo: String, v: Int) =>
+          (i: Int, foo: String, v: Long) =>
             Ok(s"Received $i, $foo, $v")
         }
       }

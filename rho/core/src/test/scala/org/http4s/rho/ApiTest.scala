@@ -126,16 +126,16 @@ class ApiTest extends Specification {
     "accept compound or sequential header rules" in {
 
       val path = POST / "hello" / 'world
-      val lplus1 = captureMap(headers.`Content-Length`)(_.length + 1)
+      val lplus1 = captureMap(headers.`Content-Length`)(_.length + 1L)
 
 
       val route1 = (path >>> lplus1 >>> capture(ETag)).decoding(EntityDecoder.text) runWith {
-        (world: String, lplus1: Int, tag: ETag, body: String) =>
+        (world: String, lplus1: Long, tag: ETag, body: String) =>
           Ok("")
       }
 
       val route2 = (path >>> (lplus1 && capture(ETag))).decoding(EntityDecoder.text) runWith {
-        (world: String, lplus1: Int, tag: ETag, body: String) =>
+        (world: String, lplus1: Long, tag: ETag, body: String) =>
           Ok("")
       }
 
