@@ -88,7 +88,7 @@ trait ResultSyntaxInstances {
   implicit class ResultSyntax[T >: Result.TopResult <: BaseResult](r: T) extends ResponseOps {
     override type Self = T
 
-    def withStatus[S <% Status](status: S): Self = r.copy(resp = r.resp.copy(status = status))
+    def withStatus(status: Status): Self = r.copy(resp = r.resp.copy(status = status))
 
     override def attemptAs[T](implicit decoder: EntityDecoder[T]): DecodeResult[T] = {
       val t: Task[DecodeFailure\/T] = r.resp.attemptAs(decoder).run
@@ -98,14 +98,8 @@ trait ResultSyntaxInstances {
     override def withAttribute[A](key: AttributeKey[A], value: A): Self =
       Result(r.resp.withAttribute(key, value))
 
-    override def replaceAllHeaders(headers: Headers): Self =
-      Result(r.resp.replaceAllHeaders(headers))
-
-    override def putHeaders(headers: Header*): Self =
-      Result(r.resp.putHeaders(headers:_*))
-
-    override def filterHeaders(f: (Header) => Boolean): Self =
-      Result(r.resp.filterHeaders(f))
+    override def transformHeaders(f: Headers => Headers): Self =
+      Result(r.resp.transformHeaders(f))
 
     def withBody[T](b: T)(implicit w: EntityEncoder[T]): Task[Self] = {
       r.resp.withBody(b)(w).map(Result(_))
@@ -115,7 +109,7 @@ trait ResultSyntaxInstances {
   implicit class TaskResultSyntax[T >: Result.TopResult <: BaseResult](r: Task[T]) extends ResponseOps {
     override type Self = Task[T]
 
-    def withStatus[S <% Status](status: S): Self = r.map{ result =>
+    def withStatus(status: Status): Self = r.map{ result =>
       result.copy(resp = result.resp.copy(status = status))
     }
 
@@ -129,14 +123,8 @@ trait ResultSyntaxInstances {
     override def withAttribute[A](key: AttributeKey[A], value: A): Self =
       r.map(r => Result(r.resp.withAttribute(key, value)))
 
-    override def replaceAllHeaders(headers: Headers): Self =
-      r.map(r => Result(r.resp.replaceAllHeaders(headers)))
-
-    override def putHeaders(headers: Header*): Self =
-      r.map(r => Result(r.resp.putHeaders(headers:_*)))
-
-    override def filterHeaders(f: (Header) => Boolean): Self =
-      r.map(r => Result(r.resp.filterHeaders(f)))
+    override def transformHeaders(f: Headers => Headers): Self =
+      r.map(r => Result(r.resp.transformHeaders(f)))
 
     def withBody[T](b: T)(implicit w: EntityEncoder[T]): Self = {
       r.flatMap(_.withBody(b)(w))

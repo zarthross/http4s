@@ -119,19 +119,25 @@ lazy val theDsl = libraryProject("dsl")
 
 lazy val rhoCore = rhoProject("rho-core")
   .settings(
-    description := "A self-documenting DSL built on http4s"
+    description := "A self-documenting DSL built on http4s",
+    libraryDependencies += scalaReflect(scalaVersion.value)
   )
   .dependsOn(server)
 
 lazy val rhoHal = rhoProject("rho-hal")
   .settings(
-    description := "JSON HAL support for rho"
+    description := "JSON HAL support for rho",
+    libraryDependencies += Http4sBuild.json4sJackson
   )
   .dependsOn(rhoCore)
 
 lazy val rhoSwagger = rhoProject("rho-swagger")
   .settings(
-    description := "Swagger support for rho"
+    description := "Swagger support for rho",
+    libraryDependencies ++= Seq(
+      Http4sBuild.json4sJackson,
+      swaggerCore
+    )
   )
   .dependsOn(rhoCore % "compile;test->test")
 

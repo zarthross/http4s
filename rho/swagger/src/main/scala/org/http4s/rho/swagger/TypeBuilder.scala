@@ -4,6 +4,7 @@ import java.util.Date
 import java.time.Instant
 
 import org.http4s.rho.bits.ResponseGenerator.EmptyRe
+import org.http4s.rho.compat._
 
 import org.log4s.getLogger
 
@@ -19,13 +20,13 @@ object TypeBuilder {
   private[this] val logger = getLogger
 
   def collectModels(t: Type, alreadyKnown: Set[Model], sfs: SwaggerFormats): Set[Model] =
-    try collectModels(t.dealias, alreadyKnown, Set.empty, sfs)
+    try collectModels(dealias(t), alreadyKnown, Set.empty, sfs)
     catch { case NonFatal(e) => Set.empty }
 
   private def collectModels(t: Type, alreadyKnown: Set[Model], known: Set[Type], sfs: SwaggerFormats): Set[Model] = {
 
     def go(t: Type, alreadyKnown: Set[Model], known: Set[Type]): Set[Model] =
-      t.dealias match {
+      dealias(t) match {
 
         case tpe if sfs.customSerializers.isDefinedAt(tpe) =>
           sfs.customSerializers(tpe)
@@ -34,21 +35,21 @@ object TypeBuilder {
           Set.empty
 
         case tpe if tpe.isEither || tpe.isMap =>
-          go(tpe.typeArgs.head, alreadyKnown, tpe.typeArgs.toSet) ++
-          go(tpe.typeArgs.last, alreadyKnown, tpe.typeArgs.toSet)
+          go(typeArgs(tpe).head, alreadyKnown, typeArgs(tpe).toSet) ++
+          go(typeArgs(tpe).last, alreadyKnown, typeArgs(tpe).toSet)
 
-        case tpe if (tpe.isCollection || tpe.isOption) && tpe.typeArgs.nonEmpty =>
-          val ntpe = tpe.typeArgs.head
+        case tpe if (tpe.isCollection || tpe.isOption) && typeArgs(tpe).nonEmpty =>
+          val ntpe = typeArgs(tpe).head
           if (!known.exists(_ =:= ntpe)) go(ntpe, alreadyKnown, known + ntpe)
           else Set.empty
 
         case tpe if tpe.isProcess =>
-          val ntpe = tpe.typeArgs.apply(1)
+          val ntpe = typeArgs(tpe).apply(1)
           if (!known.exists(_ =:= ntpe)) go(ntpe, alreadyKnown, known + ntpe)
           else Set.empty
 
         case tpe if tpe.isTask =>
-          val ntpe = tpe.typeArgs.apply(0)
+          val ntpe = typeArgs(tpe).apply(0)
           if (!known.exists(_ =:= ntpe)) go(ntpe, alreadyKnown, known + ntpe)
           else Set.empty
 
@@ -59,12 +60,12 @@ object TypeBuilder {
           Set.empty
 
         case tpe@TypeRef(_, sym: Symbol, tpeArgs: List[Type]) if isCaseClass(sym) =>
-          val ctor = sym.asClass.primaryConstructor.asMethod
+          val ctor = primaryConstructor(sym.asClass).asMethod
           val models = alreadyKnown ++ modelToSwagger(tpe, sfs)
-          val generics = tpe.typeArgs.foldLeft(List[Model]()) { (acc, t) =>
-            acc ++ go(t, alreadyKnown, tpe.typeArgs.toSet)
+          val generics = typeArgs(tpe).foldLeft(List[Model]()) { (acc, t) =>
+            acc ++ go(t, alreadyKnown, typeArgs(tpe).toSet)
           }
-          val children = ctor.paramLists.flatten.flatMap { paramsym =>
+          val children = paramLists(ctor).flatten.flatMap { paramsym =>
             val paramType =
               if (sym.isClass)
                 paramsym.typeSignature.substituteTypes(sym.asClass.typeParams, tpeArgs)
@@ -86,7 +87,7 @@ object TypeBuilder {
     Set(typeOf[Nothing], typeOf[Null])
 
   private[this] def isCaseClass(sym: Symbol): Boolean =
-    sym.isClass && sym.asClass.isCaseClass && sym.asClass.primaryConstructor.isMethod
+    sym.isClass && sym.asClass.isCaseClass && primaryConstructor(sym.asClass).isMethod
 
   private[this] def isExcluded(t: Type, excludes: Seq[Type] = Nil) =
     (defaultExcluded ++ excludes).exists(_ =:= t)
@@ -95,10 +96,9 @@ object TypeBuilder {
     try {
       val TypeRef(_, sym: Symbol, tpeArgs: List[Type]) = tpe
       val props: Map[String, Property] =
-        tpe
-          .member(termNames.CONSTRUCTOR)
-          .typeSignature
-          .paramLists
+        paramLists(tpe
+          .member(CONSTRUCTOR)
+          .typeSignature.asInstanceOf[MethodSymbol])
           .flatten
           .map(paramSymToProp(sym, tpeArgs, sfs))
           .toMap
@@ -121,7 +121,7 @@ object TypeBuilder {
       val TypeRef(_, ptSym: Symbol, ptTpeArgs: List[Type]) = pType
 
       if (pType.isCollection && !pType.isNothingOrNull)
-        ArrayProperty(items = RefProperty(pType.dealias.typeArgs.head.simpleName))
+        ArrayProperty(items = RefProperty(typeArgs(dealias(pType)).head.simpleName))
       else if (isCaseClass(ptSym))
         RefProperty(pType.simpleName)
       else
@@ -177,7 +177,7 @@ object TypeBuilder {
       new ValueDataType(name, format, qualifiedName)
 
     def apply(tag: TypeTag[_]): DataType = apply(tag.tpe)
-    def apply(tag: Type): DataType = fromType(tag.dealias)
+    def apply(tag: Type): DataType = fromType(dealias(tag))
 
     private[this] val StringTypes = Set[Type](typeOf[String], typeOf[java.lang.String])
     private[this] def isString(t: Type) = StringTypes.exists(t =:= _)
@@ -185,7 +185,7 @@ object TypeBuilder {
     private[this] def isBool(t: Type) = BoolTypes.exists(t =:= _)
 
     private[swagger] def fromType(t: Type): DataType = {
-      val klass = if (t.isOption && t.typeArgs.size > 0) t.typeArgs.head else t
+      val klass = if (t.isOption && typeArgs(t).size > 0) typeArgs(t).head else t
       if (klass <:< typeOf[Unit] || klass <:< typeOf[Void]) this.Void
       else if (t =:= weakTypeOf[EmptyRe]) this.Void
       else if (isString(klass)) this.String
@@ -197,19 +197,19 @@ object TypeBuilder {
       else if (isDateTime(klass)) this.DateTime
       else if (isBool(klass)) this.Boolean
       else if (klass <:< typeOf[scala.collection.Set[_]] || klass <:< typeOf[java.util.Set[_]]) {
-        if (t.typeArgs.nonEmpty) GenSet(fromType(t.typeArgs.head))
+        if (typeArgs(t).nonEmpty) GenSet(fromType(typeArgs(t).head))
         else GenSet()
       } else if (klass <:< typeOf[collection.Seq[_]] || klass <:< typeOf[java.util.List[_]]) {
-        if (t.typeArgs.nonEmpty) GenList(fromType(t.typeArgs.head))
+        if (typeArgs(t).nonEmpty) GenList(fromType(typeArgs(t).head))
         else GenList()
       } else if (t.isArray || isCollection(klass)) {
-        if (t.typeArgs.nonEmpty) GenArray(fromType(t.typeArgs.head))
+        if (typeArgs(t).nonEmpty) GenArray(fromType(typeArgs(t).head))
         else GenArray()
       } else if (t.isProcess) {
-        if (t.typeArgs.nonEmpty) GenArray(fromType(t.typeArgs(1)))
+        if (typeArgs(t).nonEmpty) GenArray(fromType(typeArgs(t)(1)))
         else GenArray()
       } else {
-        val stt = if (t.isOption) t.typeArgs.head else t
+        val stt = if (t.isOption) typeArgs(t).head else t
         ComplexDataType(stt.simpleName, qualifiedName = Option(stt.fullName))
       }
     }

@@ -5,6 +5,7 @@ package swagger
 import org.http4s.rho.bits.PathAST._
 import org.http4s.rho.bits.RequestAST._
 import org.http4s.rho.bits._
+import org.http4s.rho.compat._
 
 import org.log4s.getLogger
 
@@ -79,7 +80,7 @@ private[swagger] class SwaggerModelsBuilder(formats: SwaggerFormats) {
             case _ : TypeBuilder.DataType.ComplexDataType =>
               tpe :: go(x::xs)
             case TypeBuilder.DataType.ContainerDataType(_, Some(_: TypeBuilder.DataType.ComplexDataType), _) =>
-              q.m.tpe.typeArgs.head :: go(x::xs)
+              typeArgs(q.m.tpe).head :: go(x::xs)
             case _ => go(x::xs)
           }
 
@@ -254,9 +255,9 @@ private[swagger] class SwaggerModelsBuilder(formats: SwaggerFormats) {
       else if (tpe.isCollection)
         mkCollectionProperty(tpe)
       else if (tpe.isProcess)
-        typeToProp(tpe.dealias.typeArgs(1))
+        typeToProp(typeArgs(dealias(tpe))(1))
       else if (tpe.isTask)
-        typeToProp(tpe.dealias.typeArgs(0))
+        typeToProp(typeArgs(dealias(tpe))(0))
       else
         RefProperty(ref = tpe.simpleName).some      
 
@@ -273,7 +274,7 @@ private[swagger] class SwaggerModelsBuilder(formats: SwaggerFormats) {
     }
 
     def mkCollectionProperty(tpe: Type): Option[Property] = {
-      val param = tpe.dealias.typeArgs.head
+      val param = typeArgs(dealias(tpe)).head
       val prop =
         if (param.isPrimitive)
           mkPrimitiveProperty(param).some

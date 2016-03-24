@@ -4,6 +4,7 @@ import java.sql.Timestamp
 import java.util.Date
 import org.http4s.Method
 import org.http4s.rho.bits.{TextMetaData, PathAST}
+import org.http4s.rho.compat._
 import shapeless.HNil
 
 import scala.reflect.runtime.universe._
@@ -54,15 +55,15 @@ package object swagger {
 
     def simpleName: String = {
       t.typeSymbol.name.decodedName.toString + {
-        if (t.typeArgs.isEmpty) ""
-        else t.typeArgs.map(_.simpleName).mkString(genericStart, genericSep, genericEnd)
+        if (typeArgs(t).isEmpty) ""
+        else typeArgs(t).map(_.simpleName).mkString(genericStart, genericSep, genericEnd)
       }
     }
 
     def fullName: String = {
       t.typeSymbol.fullName + {
-        if (t.typeArgs.isEmpty) ""
-        else t.typeArgs.map(_.fullName).mkString(genericStart, genericSep, genericEnd)
+        if (typeArgs(t).isEmpty) ""
+        else typeArgs(t).map(_.fullName).mkString(genericStart, genericSep, genericEnd)
       }
     }
 

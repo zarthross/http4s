@@ -2,6 +2,7 @@ package org.http4s.rho.bits
 
 import org.http4s.{Request, Response, Status, EntityEncoder, MediaType}
 import org.http4s.rho.Result
+import org.http4s.rho.compat._
 
 import scala.reflect.runtime.universe.{ Type, WeakTypeTag }
 import scalaz.concurrent.Task
@@ -36,7 +37,7 @@ object ResultMatcher {
       private val ww = Option(w)
       override def contentType: Set[MediaType] = ww.flatMap(_.contentType.map(_.mediaType)).toSet
       override def encodings: Set[MediaType] = ww.flatMap(_.contentType.map(_.mediaType)).toSet
-      override def resultInfo: Option[Type] = Some(t.tpe.dealias)
+      override def resultInfo: Option[Type] = Some(dealias(t.tpe))
     }
   }
 
@@ -419,7 +420,7 @@ object ResultMatcher {
 
   implicit def optionMatcher[O](implicit o: WeakTypeTag[O], w: EntityEncoder[O]) = new ResultMatcher[Option[O]] {
     override val encodings: Set[MediaType] = w.contentType.map(_.mediaType).toSet
-    override val resultInfo: Set[ResultInfo] = Set(StatusAndType(Status.Ok, o.tpe.dealias),
+    override val resultInfo: Set[ResultInfo] = Set(StatusAndType(Status.Ok, dealias(o.tpe)),
                                                    StatusOnly(Status.NotFound))
     override def conv(req: Request, r: Option[O]): Task[Response] = r match {
       case Some(r) => ResponseGeneratorInstances.Ok.pure(r)
@@ -429,7 +430,7 @@ object ResultMatcher {
 
   implicit def writableMatcher[O](implicit o: WeakTypeTag[O], w: EntityEncoder[O]) = new ResultMatcher[O] {
     override def encodings: Set[MediaType] = w.contentType.map(_.mediaType).toSet
-    override def resultInfo: Set[ResultInfo] = Set(StatusAndType(Status.Ok, o.tpe.dealias))
+    override def resultInfo: Set[ResultInfo] = Set(StatusAndType(Status.Ok, dealias(o.tpe)))
     override def conv(req: Request, r: O): Task[Response] = ResponseGeneratorInstances.Ok.pure(r)
   }
 
