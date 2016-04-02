@@ -5,19 +5,16 @@ import javax.servlet._
 
 import com.codahale.metrics.MetricRegistry
 import com.codahale.metrics.servlets.MetricsServlet
-import org.http4s.server.jetty.JettyBuilder
+import org.http4s.server.jetty.Jetty
 
-/// code_ref: jetty_example
 object JettyExample extends App {
   val metrics = new MetricRegistry
 
-  JettyBuilder
+  Jetty
     .bindHttp(8080)
-    .withMetricRegistry(metrics)
+//    .withMetricRegistry(metrics)
     .mountService(ExampleService.service, "/http4s")
-    .mountServlet(new MetricsServlet(metrics), "/metrics/*")
-    .mountFilter(NoneShallPass, "/http4s/science/black-knight/*")
+//    .mountServlet(new MetricsServlet(metrics), "/metrics/*")
+//    .mountFilter(NoneShallPass, "/http4s/science/black-knight/*")
     .run
-    .awaitShutdown()
 }
-/// end_code_ref

@@ -25,6 +25,7 @@ import org.eclipse.jetty.util.component.LifeCycle
 import org.eclipse.jetty.server.{Server => JServer, _}
 import org.eclipse.jetty.servlet.{FilterHolder, ServletHolder, ServletContextHandler}
 
+@deprecated("Use org.http4s.server.jetty.Jetty instead", "0.14")
 sealed class JettyBuilder private (
   socketAddress: InetSocketAddress,
   private val serviceExecutor: ExecutorService,
@@ -217,4 +218,5 @@ object JettyBuilder extends JettyBuilder(
   metricPrefix = MetricsSupport.DefaultPrefix
 )
 
+@deprecated("Use org.http4s.server.jetty.Jetty instead", "0.14")
 private case class Mount(f: (ServletContextHandler, Int, JettyBuilder) => Unit)
