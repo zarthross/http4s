@@ -11,10 +11,9 @@ object JettyExample extends App {
   val metrics = new MetricRegistry
 
   Jetty
-    .bindHttp(8080)
-//    .withMetricRegistry(metrics)
     .mountService(ExampleService.service, "/http4s")
-//    .mountServlet(new MetricsServlet(metrics), "/metrics/*")
-//    .mountFilter(NoneShallPass, "/http4s/science/black-knight/*")
+    .mountServlet(new MetricsServlet(metrics), "/metrics/*")
+    .mountFilter(NoneShallPass, "/http4s/science/black-knight/*")
+    .startInstrumented(metrics)
     .run
 }

@@ -15,7 +15,15 @@ package object jetty {
   val Jetty = JettyConfig { server =>
     Task.delay {
       server.start()
-      logger.info("Jetty server started on ${address}")
+
+      val myAddress = 
+        server.getConnectors.collectFirst {
+          case connector: NetworkConnector =>
+            val host = Option(connector.getHost).getOrElse("0.0.0.0")
+            val port = connector.getLocalPort
+            new InetSocketAddress(host, port)
+        }.getOrElse(new InetSocketAddress("0.0.0.0", 0))
+      logger.info(s"Jetty server started on ${myAddress}")
 
       new Server {
         override def shutdown: Task[Unit] =
@@ -31,14 +39,8 @@ package object jetty {
           this
         }
 
-        lazy val address: InetSocketAddress = {
-          server.getConnectors.collectFirst {
-            case connector: NetworkConnector =>
-              val host = Option(connector.getHost).getOrElse("0.0.0.0")
-              val port = connector.getLocalPort
-              new InetSocketAddress(host, port)
-          }.getOrElse(new InetSocketAddress("0.0.0.0", 0))
-        }
+        val address: InetSocketAddress =
+          myAddress
       }
     }
   }
