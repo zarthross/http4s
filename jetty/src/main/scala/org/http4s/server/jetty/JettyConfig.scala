@@ -25,66 +25,11 @@ import scalaz.concurrent.Task
 class JettyConfig private[jetty] (config: ReaderT[Task, JettyServer, Server]) {
   private[this] val logger = org.log4s.getLogger
 
-  /**
-   * Starts a server.  If no connector has been added, an HTTP
-   * connector will be started on 0.0.0.0:8080.
-   */
-  def start: Task[Server] =
-    start {
-      new JettyServer()
-        .tap(_.setHandler(
-           new ServletContextHandler()
-             .tap(_.setContextPath("/"))
-        ))
-        .tap(jetty => jetty.addConnector(
-           new ServerConnector(jetty)
-             .tap(_.setPort(8080))
-        ))
-    }
-
-  def start(jetty: JettyServer): Task[Server] =
+  def start(jetty: JettyServer = Default): Task[Server] =
     config.run(jetty)
 
-  def startInstrumented(registry: MetricRegistry,
-                        prefix: String = "org.http4s.server"): Task[Server] =
-    start {
-      new JettyServer(new InstrumentedQueuedThreadPool(registry)) {
-        override def addConnector(connector: Connector): Unit =
-          super.addConnector(instrumentConnector(connector))
-
-        override def setConnectors(connectors: Array[Connector]): Unit =
-          super.setConnectors(connectors.map(instrumentConnector(_)))
-
-        private def instrumentConnector(connector: Connector): connector.type = 
-          connector match {
-            case c: AbstractConnector =>
-              c.setConnectionFactories(
-                connector.getConnectionFactories.asScala.map { factory =>
-                  val name = MetricRegistry.name(prefix, "connections", factory.getProtocol)
-                  val timer = registry.timer(name)
-                  new InstrumentedConnectionFactory(factory, timer): ConnectionFactory
-                }.asJavaCollection
-              )
-              connector
-            case other =>
-              connector
-          }
-      }
-      .tap(_.setHandler(
-        new InstrumentedHandler(registry, Some(prefix))
-          .tap(_.setHandler(
-            new ServletContextHandler()
-              .tap(_.setContextPath("/"))
-          ))
-      ))
-      .tap(jetty => jetty.addConnector(
-         new ServerConnector(jetty)
-           .tap(_.setPort(8080))
-      ))
-    }
-
-  def run: Server =
-    start.run
+  def run(jetty: JettyServer = Default): Server =
+    start(jetty).run
 
   def configure(f: JettyServer => Unit): JettyConfig =
     JettyConfig(config.local { jetty: JettyServer => f(jetty); jetty })

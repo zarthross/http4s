@@ -5,7 +5,7 @@ import javax.servlet._
 
 import com.codahale.metrics.MetricRegistry
 import com.codahale.metrics.servlets.MetricsServlet
-import org.http4s.server.jetty.Jetty
+import org.http4s.server.jetty._
 
 object JettyExample extends App {
   val metrics = new MetricRegistry
@@ -14,6 +14,5 @@ object JettyExample extends App {
     .mountService(ExampleService.service, "/http4s")
     .mountServlet(new MetricsServlet(metrics), "/metrics/*")
     .mountFilter(NoneShallPass, "/http4s/science/black-knight/*")
-    .startInstrumented(metrics)
-    .run
+    .run(instrumented(metrics))
 }
