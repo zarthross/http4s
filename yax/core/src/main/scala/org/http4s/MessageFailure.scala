@@ -1,7 +1,10 @@
 package org.http4s
 
-import scala.util.control.{NoStackTrace, NonFatal}
+#+scalaz-stream
 import scalaz.concurrent.Task
+#-scalaz-stream
+
+import scala.util.control.{NoStackTrace, NonFatal}
 import scalaz.{\/-, -\/, Equal}
 
 /** Indicates a failure to handle an HTTP [[Message]]. */

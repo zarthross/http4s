@@ -1,3 +1,4 @@
+#+scalaz-stream
 package org.http4s.util
 
 import scodec.bits.ByteVector
@@ -10,3 +11,4 @@ trait ByteVectorInstances {
 }
 
 object byteVector extends ByteVectorInstances
+#-scalaz-stream

@@ -8,33 +8,59 @@ import sbtunidoc.Plugin.UnidocKeys._
 organization in ThisBuild := "org.http4s"
 version      in ThisBuild := scalazCrossBuild("0.15.0-SNAPSHOT", scalazVersion.value)
 apiVersion   in ThisBuild <<= version.map(extractApiVersion)
-scalaVersion in ThisBuild := "2.10.6"
+scalaVersion in ThisBuild := "2.11.8"
 // The build supports both scalaz `7.1.x` and `7.2.x`. Simply run
 // `set scalazVersion in ThiBuild := "7.2.4"` to change which version of scalaz
 // is used to build the project.
-scalazVersion in ThisBuild := "7.1.8"
-crossScalaVersions in ThisBuild <<= scalaVersion(Seq(_, "2.11.8"))
+scalazVersion in ThisBuild := "7.2.3"
+crossScalaVersions in ThisBuild <<= scalaVersion(Seq(_))
 
 // Root project
 name := "root"
 description := "A minimal, Scala-idiomatic library for HTTP"
 noPublishSettings
 
-lazy val core = libraryProject("core")
+def coreProject(mod: String) = libraryProject(mod)
   .enablePlugins(BuildInfoPlugin)
   .settings(
     description := "Core http4s library for servers and clients",
     buildInfoKeys := Seq[BuildInfoKey](version, scalaVersion, apiVersion),
     buildInfoPackage <<= organization,
-    libraryDependencies <++= (scalaVersion, scalazVersion) { (v,sz) => Seq(
+    libraryDependencies ++= Seq(
       http4sWebsocket,
       log4s,
       parboiled,
-      scalaReflect(v) % "provided",
-      scalazCore(sz),
-      scalazStream(sz)
-    ) },
+      scalaReflect(scalaVersion.value) % "provided"
+    ),
     macroParadiseSetting
+  )
+
+lazy val core = coreProject("core")
+  .settings(
+    yax(file("yax/core"), "scalaz", "scalaz-stream"),
+    libraryDependencies ++= Seq(
+      scalazCore(scalazVersion.value),
+      scalazStream(scalazVersion.value)
+    )
+  )
+
+lazy val coreScalazFs2 = coreProject("core-scalaz-fs2")
+  .settings(
+    yax(file("yax/core"), "scalaz", "fs2"),
+    libraryDependencies ++= Seq(
+      fs2Core,
+      fs2Scalaz,
+      scalazCore(scalazVersion.value)
+    )
+  )
+
+lazy val coreCats = coreProject("core-cats")
+  .settings(
+    yax(file("yax/core"), "cats", "fs2"),
+    libraryDependencies ++= Seq(
+      cats,
+      fs2Core
+    )
   )
 
 lazy val server = libraryProject("server")

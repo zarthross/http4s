@@ -1,5 +1,16 @@
 package org.http4s
 
+#+fs2
+import fs2.{Chunk, Task}
+import fs2.interop.scalaz._
+#-fs2
+#+scalaz-stream
+import scodec.bits.ByteVector
+import scalaz.concurrent.Task
+import scalaz.stream.{io, process1}
+import org.http4s.util.byteVector._
+#-scalaz-stream
+
 import java.io.{File, FileOutputStream, StringReader}
 import javax.xml.parsers.SAXParser
 
@@ -7,19 +18,15 @@ import org.xml.sax.{InputSource, SAXParseException}
 import java.io.{File, FileOutputStream}
 import org.http4s.headers.`Content-Type`
 import org.http4s.multipart.{Multipart, MultipartDecoder}
-import scodec.bits.ByteVector
 
 import scala.annotation.unchecked.uncheckedVariance
 import scala.util.control.NonFatal
 import scalaz.Liskov.{<~<, refl}
-import scalaz.concurrent.Task
 import scalaz.std.string._
-import scalaz.stream.{io, process1}
 import scalaz.syntax.monad._
 import scalaz.{-\/, EitherT, \/, \/-}
 
 import util.UrlFormCodec.{ decode => formDecode }
-import util.byteVector._
 
 /** A type that can be used to decode a [[Message]]
   * EntityDecoder is used to attempt to decode a [[Message]] returning the
@@ -127,8 +134,15 @@ object EntityDecoder extends EntityDecoderInstances {
   }
 
   /** Helper method which simply gathers the body into a single ByteVector */
-  def collectBinary(msg: Message): DecodeResult[ByteVector] =
-    DecodeResult.success(msg.body.runFoldMap(identity))
+  def collectBinary(msg: Message): DecodeResult[ByteVector] = {
+#+scalaz-stream
+    val f = identity
+#-scalaz-stream
+#+fs2
+    val f = Chunk[ByteVector].apply
+#-fs2
+    DecodeResult.success(msg.body.runFoldMap(f))
+  }
 
   /** Decodes a message to a String */
   def decodeString(msg: Message)(implicit defaultCharset: Charset = DefaultCharset): Task[String] =
