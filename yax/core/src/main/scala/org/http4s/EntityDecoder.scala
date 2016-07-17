@@ -161,7 +161,14 @@ trait EntityDecoderInstances {
   /** Provides a mechanism to fail decoding */
   def error[T](t: Throwable) = new EntityDecoder[T] {
     override def decode(msg: Message, strict: Boolean): DecodeResult[T] = {
+#+scalaz-stream      
       DecodeResult(msg.body.kill.run.flatMap(_ => Task.fail(t)))
+#-scalaz-stream
+#+fs2
+      // TODO drain is less efficient than kill for substantially large
+      // bodies, but there is no longer a means to early-terminate a stream.
+      DecodeResult(msg.body.drain.run.flatMap(_ => Task.fail(t)))      
+#-fs2
     }
     override def consumes: Set[MediaRange] = Set.empty
   }

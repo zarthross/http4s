@@ -22,7 +22,7 @@ import scalaz.stream.io
 import scalaz.stream.Cause.{End, Terminated}
 #-scalaz-stream
 #+fs2
-import fs2.{Stream => Process, Strategy, Task}
+import fs2.{Chunk, Stream => Process, Strategy, Task}
 import fs2.io
 import fs2.Stream.{empty => halt}
 #-fs2
@@ -124,33 +124,20 @@ object StaticFile {
       Some(r)
   }}
 
-#+scalaz-stream  
   private def fileToBody(f: File, start: Long, end: Long, buffsize: Int)
-                (implicit es: ExecutorService): Process[Task, ByteVector] =
-#-scalaz-stream
-#+fs2
-  private def fileToBody(f: File, start: Long, end: Long, buffsize: Int)
-                (implicit es: ExecutorService): Process[Task, Byte] =
-#-fs2
-  { 
+                (implicit es: ExecutorService): EntityBody = { 
+#+scalaz-stream
     val outer = Task {
 
       val ch = AsynchronousFileChannel.open(f.toPath, Collections.emptySet(), es)
 
       val buff = ByteBuffer.allocate(buffsize)
       var position = start
-#+fs2
-      implicit val strategy = Strategy.fromExecutor(es)
-#-fs2
-      val innerTask = Task.async[ByteVector]{ cb =>
+
+      val innerTask = Task.async[ByteVector] { cb =>
         // Check for ending condition
         if (!ch.isOpen)
-#+scalaz-stream
           cb(-\/(Terminated(End)))
-#-scalaz-stream
-#+fs2
-          cb(Left(Terminated(End)))
-#-fs2
 
         else {
           val remaining = end - position
@@ -160,12 +147,7 @@ object StaticFile {
             def failed(t: Throwable, attachment: Null) {
               logger.error(t)("Static file NIO process failed")
               ch.close()
-#+scalaz-stream
               cb(-\/(t))
-#-scalaz-stream
-#+fs2
-              cb(Left(t))
-#-fs2
             }
 
             def completed(count: Integer, attachment: Null) {
@@ -181,12 +163,7 @@ object StaticFile {
               position += count
               if (position >= end) ch.close()
 
-#+scalaz-stream
               cb(-\/(c))
-#-scalaz-stream
-#+fs2
-              cb(Right(c))
-#-fs2
             }
           })
         }
@@ -205,6 +182,14 @@ object StaticFile {
     }
 
     await(outer)(identity)
+#-scalaz-stream
+#+fs2
+    implicit val strategy = Strategy.fromExecutor(es)
+    io.file.readAllAsync[Task](f.toPath, buffsize)
+      // TODO these are in poor taste, but it compiles
+      .drop(start.toInt)
+      .take(end.toInt - start.toInt)
+#-fs2
   }
 
   private[http4s] val staticFileKey = AttributeKey.http4s[File]("staticFile")
