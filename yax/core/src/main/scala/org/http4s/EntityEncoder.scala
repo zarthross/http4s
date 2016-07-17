@@ -20,13 +20,13 @@ import scalaz.concurrent.Task
 import scalaz.stream.{Process0, Channel, Process, io}
 import scalaz.stream.nio.file
 import scalaz.stream.Cause.{End, Terminated}
-import scalaz.stream.Process.emit
 #-scalaz-stream
 #+fs2
 import fs2.{Stream => Process, Task}
 #-fs2
 
 trait EntityEncoder[A] { self =>
+  import Process.emit
 
   /** Convert the type `A` to an [[Entity]] in the `Task` monad */
   def toEntity(a: A): Task[EntityEncoder.Entity]

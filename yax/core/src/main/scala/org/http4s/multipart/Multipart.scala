@@ -22,6 +22,9 @@ import scalaz.stream.Process.{ constant, emit }
 import scalaz.stream.io.chunkR
 #-scalaz-stream
 #+fs2
+import fs2.Stream.emit
+import fs2.Task
+import fs2.io.file.readInputStream
 import fs2.text.utf8Encode
 #-fs2
 
@@ -34,7 +37,14 @@ object Part {
     Part(Headers.empty, EmptyBody)
 
   def formData(name: String, value: String, headers: Header*): Part =
-    Part(`Content-Disposition`("form-data", Map("name" -> name)) +: headers, emit(value) |> utf8Encode)
+    Part(`Content-Disposition`("form-data", Map("name" -> name)) +: headers,
+#+scalaz-stream      
+  emit(value) |> utf8Encode
+#-scalaz-stream
+#+fs2
+  emit(value).through(utf8Encode)
+#-fs2
+    )
 
   def fileData(name: String, file: File, headers: Header*): Part =
     fileData(name, file.getName, new FileInputStream(file), headers:_*)
@@ -44,9 +54,15 @@ object Part {
 
   private def fileData(name: String, filename: String, in: => InputStream, headers: Header*): Part = {
     Part(`Content-Disposition`("form-data", Map("name" -> name, "filename" -> filename)) +:
-           Header("Content-Transfer-Encoding", "binary") +:
-           headers,
-         constant(8192).toSource through chunkR(in))
+      Header("Content-Transfer-Encoding", "binary") +:
+      headers,
+#+scalaz-stream
+      constant(8192).toSource through chunkR(in)
+#-scalaz-stream
+#+fs2
+      readInputStream(Task.delay(in), 8192)
+#-fs2
+    )
    }
 }
 

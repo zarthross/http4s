@@ -8,21 +8,23 @@ import parser._
 import headers._
 import Http4s._
 import org.http4s.util._
-import scalaz.concurrent._
-import scalaz.concurrent.Task._
 
 import scalaz._
 import Scalaz._
+import scodec.bits.ByteVector
 import org.parboiled2._
 import org.log4s.getLogger
 
 #+scalaz-stream
-import scalaz.stream._
-import scalaz.stream.Process._
-import scodec.bits.ByteVector
+import scalaz.stream.Process
+import scalaz.concurrent.Task
 #-scalaz-stream
+#+fs2
+import fs2.{Stream => Process, Task}
+#-fs2
 
 private[http4s] object MultipartDecoder {
+  import Process._
 
   private[this] val logger = getLogger
   

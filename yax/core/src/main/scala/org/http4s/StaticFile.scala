@@ -9,7 +9,6 @@ import java.util.concurrent.ExecutorService
 import java.time.Instant
 
 import scalaz.{\/-, -\/}
-import scalaz.concurrent.{Strategy, Task}
 
 import org.http4s.headers._
 import org.http4s.Status.NotModified
@@ -17,12 +16,13 @@ import org.log4s.getLogger
 import scodec.bits.ByteVector
 
 #+scalaz-stream
+import scalaz.concurrent.{Strategy, Task}
 import scalaz.stream.Process
 import scalaz.stream.io
 import scalaz.stream.Cause.{End, Terminated}
 #-scalaz-stream
 #+fs2
-import fs2.{Stream => Process}
+import fs2.{Stream => Process, Strategy, Task}
 import fs2.io
 import fs2.Stream.{empty => halt}
 #-fs2
@@ -35,17 +35,17 @@ object StaticFile {
   val DefaultBufferSize = 10240
 
   def fromString(url: String, req: Option[Request] = None)
-                (implicit es: ExecutorService = Strategy.DefaultExecutorService): Option[Response] = {
+                (implicit es: ExecutorService = DefaultExecutorService): Option[Response] = {
     fromFile(new File(url), req)
   }
 
   def fromResource(name: String, req: Option[Request] = None)
-             (implicit es: ExecutorService = Strategy.DefaultExecutorService): Option[Response] = {
+             (implicit es: ExecutorService = DefaultExecutorService): Option[Response] = {
     Option(getClass.getResource(name)).flatMap(fromURL(_, req))
   }
 
   def fromURL(url: URL, req: Option[Request] = None)
-             (implicit es: ExecutorService = Strategy.DefaultExecutorService): Option[Response] = {
+             (implicit es: ExecutorService = DefaultExecutorService): Option[Response] = {
     val lastmod = Instant.ofEpochMilli(url.openConnection.getLastModified())
     val expired = req
       .flatMap(_.headers.get(`If-Modified-Since`))
@@ -61,16 +61,16 @@ object StaticFile {
       Some(Response(
         headers = headers,
 #+scalaz-stream        
-        body    = Process.constant(DefaultBufferSize).toSource.through(io.chunkR(url.openStream))
+        body = Process.constant(DefaultBufferSize).toSource.through(io.chunkR(url.openStream))
 #-scalaz-stream
 #+fs2
-        body    = io.file.readInputStream(url.openStream, DefaultBufferSize)
+        body = io.file.readInputStream(Task.delay(url.openStream), DefaultBufferSize)
 #-fs2
       ))
     } else Some(Response(NotModified))
   }
 
-  def fromFile(f: File, req: Option[Request] = None)(implicit es: ExecutorService = Strategy.DefaultExecutorService): Option[Response] =
+  def fromFile(f: File, req: Option[Request] = None)(implicit es: ExecutorService = DefaultExecutorService): Option[Response] =
     fromFile(f, DefaultBufferSize, req)
 
   def fromFile(f: File, buffsize: Int, req: Option[Request])
@@ -133,10 +133,18 @@ object StaticFile {
 
       val buff = ByteBuffer.allocate(buffsize)
       var position = start
-
+#+fs2
+      implicit val strategy = Strategy.fromExecutor(es)
+#-fs2
       val innerTask = Task.async[ByteVector]{ cb =>
         // Check for ending condition
-        if (!ch.isOpen) cb(-\/(Terminated(End)))
+        if (!ch.isOpen)
+#+scalaz-stream
+          cb(-\/(Terminated(End)))
+#-scalaz-stream
+#+fs2
+          cb(Left(Terminated(End)))
+#-fs2
 
         else {
           val remaining = end - position
@@ -146,7 +154,12 @@ object StaticFile {
             def failed(t: Throwable, attachment: Null) {
               logger.error(t)("Static file NIO process failed")
               ch.close()
+#+scalaz-stream
               cb(-\/(t))
+#-scalaz-stream
+#+fs2
+              cb(Left(t))
+#-fs2
             }
 
             def completed(count: Integer, attachment: Null) {
@@ -162,7 +175,12 @@ object StaticFile {
               position += count
               if (position >= end) ch.close()
 
-              cb(\/-(c))
+#+scalaz-stream
+              cb(-\/(c))
+#-scalaz-stream
+#+fs2
+              cb(Right(c))
+#-fs2
             }
           })
         }

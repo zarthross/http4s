@@ -1,5 +1,6 @@
 package org
 
+import java.util.concurrent.{Executors, ExecutorService, ThreadFactory}
 import scalaz.{Kleisli, EitherT, \/}
 import scodec.bits.ByteVector
 
@@ -24,6 +25,26 @@ package object http4s {
   type EntityBody = Process[Task, Byte]
   val EmptyBody: EntityBody = Process.empty
 #-fs2
+
+  // This is perhaps in poor taste, but right now, we're trying to do a
+  // straight port of scalaz-stream to fs2.
+  val DefaultExecutorService: ExecutorService = {
+#+scalaz-stream
+    scalaz.concurrent.DefaultExecutorService
+#-scalaz-stream
+#+fs2
+    val defaultDaemonThreadFactory = new ThreadFactory {
+      val defaultThreadFactory = Executors.defaultThreadFactory()
+      def newThread(r: Runnable) = {
+        val t = defaultThreadFactory.newThread(r)
+        t.setDaemon(true)
+        t
+      }
+    }
+    Executors.newFixedThreadPool(Runtime.getRuntime.availableProcessors,
+      defaultDaemonThreadFactory)
+#-fs2  
+}
 
   type DecodeResult[T] = EitherT[Task, DecodeFailure, T]
 
@@ -85,9 +106,10 @@ package object http4s {
       * services will have the opportunity to handle the request.
       * See [[Fallthrough]] for more details.
       */
-    val notFound: Task[Response] = Task.now(Response(Status.NotFound)
-                                               .withAttribute(Fallthrough.fallthroughKey, ())
-                                               .withBody("404 Not Found.").run)
+    val notFound: Task[Response] =
+      Response(Status.NotFound)
+        .withAttribute(Fallthrough.fallthroughKey, ())
+        .withBody("404 Not Found.")
   
     val empty   : HttpService    = Service.const(notFound)
   }
