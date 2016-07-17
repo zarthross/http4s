@@ -18,7 +18,7 @@ import scalaz.concurrent.Task
 import scalaz.stream.Process
 #-scalaz-stream
 #+fs2
-import fs2.{Stream => Process, Task}
+import fs2.{Chunk, Stream => Process, Task}
 #-fs2
 
 private[http4s] object MultipartEncoder extends EntityEncoder[Multipart] {
@@ -58,10 +58,18 @@ private[http4s] object MultipartEncoder extends EntityEncoder[Multipart] {
     val _end           = end(mp.boundary)
     val _encapsulation = ByteVector(encapsulation(mp.boundary).getBytes)
 
-    def renderPart(prelude: ByteVector, p: Part) =
-      Process.emit(prelude ++ (p.headers.foldLeft(ByteVectorWriter()) { (w, h) =>
+    def renderPart(prelude: ByteVector, p: Part): EntityBody = {
+      val header = Process.emit(prelude ++ (p.headers.foldLeft(ByteVectorWriter()) { (w, h) =>
         w << h << Boundary.CRLF
-      } << Boundary.CRLF).toByteVector) ++ p.body
+      } << Boundary.CRLF).toByteVector)
+#+scalaz-stream
+      header ++ p.body
+#-scalaz-stream
+#+fs2
+      // TODO is there a better way here?
+      header.map(bv => Chunk.bytes(bv.toArray)).flatMap(Process.chunk) ++ p.body
+#-fs2
+    }
 
     val parts = mp.parts
     val body = parts.tail.foldLeft(renderPart(_start, parts.head)) { (acc, part) =>

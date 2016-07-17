@@ -24,6 +24,7 @@ object MultipartParser {
   private val CRLF = ByteVector('\r', '\n')
   private val DASHDASH = ByteVector('-', '-')
 
+#+scalaz-stream
   private final case class Out[+A](a: A, tail: Option[ByteVector] = None)
 
   def parse(boundary: Boundary): Writer1[Headers, ByteVector, ByteVector] = {
@@ -201,4 +202,5 @@ object MultipartParser {
 
     start
   }
+#-scalaz-stream
 }

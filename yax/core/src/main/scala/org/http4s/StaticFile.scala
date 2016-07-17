@@ -124,9 +124,15 @@ object StaticFile {
       Some(r)
   }}
 
+#+scalaz-stream  
   private def fileToBody(f: File, start: Long, end: Long, buffsize: Int)
-                (implicit es: ExecutorService): Process[Task, ByteVector] = {
-
+                (implicit es: ExecutorService): Process[Task, ByteVector] =
+#-scalaz-stream
+#+fs2
+  private def fileToBody(f: File, start: Long, end: Long, buffsize: Int)
+                (implicit es: ExecutorService): Process[Task, Byte] =
+#-fs2
+  { 
     val outer = Task {
 
       val ch = AsynchronousFileChannel.open(f.toPath, Collections.emptySet(), es)

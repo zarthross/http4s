@@ -141,6 +141,7 @@ object EntityDecoder extends EntityDecoderInstances {
 #-scalaz-stream
 #+fs2
     import util.byteVector._
+    // TODO I'm not sure about performance here...
     val f = ByteVector.fromByte _
 #-fs2
     DecodeResult.success(msg.body.runFoldMap(f))

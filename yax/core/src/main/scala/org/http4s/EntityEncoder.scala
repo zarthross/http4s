@@ -20,11 +20,12 @@ import scalaz.concurrent.Task
 import scalaz.stream.{Process0, Channel, Process, io}
 import scalaz.stream.nio.file
 import scalaz.stream.Cause.{End, Terminated}
+import Process.emit
 #-scalaz-stream
 #+fs2
-import fs2.{Stream => Process, Task}
+import fs2.{Chunk, Stream => Process, Task}
+import Process.chunk
 #-fs2
-import Process.emit
 
 trait EntityEncoder[A] { self =>
 
@@ -88,18 +89,36 @@ object EntityEncoder extends EntityEncoderInstances {
     *
     * This constructor is a helper for types that can be serialized synchronously, for example a String.
     */
-  def simple[A](hs: Header*)(toChunk: A => ByteVector): EntityEncoder[A] = encodeBy(hs:_*){ a =>
-    val c = toChunk(a)
-    Task.now(Entity(emit(c), Some(c.length)))
-  }
+#+scalaz-stream
+  def simple[A](hs: Header*)(toChunk: A => ByteVector): EntityEncoder[A] =
+#-scalaz-stream
+#+fs2
+  def simple[A](hs: Header*)(toChunk: A => Chunk[Byte]): EntityEncoder[A] =
+#-fs2
+    encodeBy(hs:_*){ a =>
+      val c = toChunk(a)
+      Task.now(Entity(
+#+scalaz-stream
+        emit(c),
+#-scalaz-stream
+#+fs2
+        chunk(c),
+#-fs2
+        Some(c.size)))
+    }
 }
 
 trait EntityEncoderInstances0 {
   /** Encodes a value from its Show instance.  Too broad to be implicit, too useful to not exist. */
    def showEncoder[A](implicit charset: Charset = DefaultCharset, show: Show[A]): EntityEncoder[A] = {
-    val hdr = `Content-Type`(MediaType.`text/plain`).withCharset(charset)
+     val hdr = `Content-Type`(MediaType.`text/plain`).withCharset(charset)
+#+scalaz-stream     
     simple[A](hdr)(a => ByteVector.view(show.shows(a).getBytes(charset.nioCharset)))
-  }
+#-scalaz-stream
+#+fs2
+    simple[A](hdr)(a => Chunk.bytes(show.shows(a).getBytes(charset.nioCharset)))
+#-fs2
+   }
 
   implicit def futureEncoder[A](implicit W: EntityEncoder[A], ec: ExecutionContext): EntityEncoder[Future[A]] =
     new EntityEncoder[Future[A]] {
@@ -140,7 +159,12 @@ trait EntityEncoderInstances0 {
 trait EntityEncoderInstances extends EntityEncoderInstances0 {
   implicit def stringEncoder(implicit charset: Charset = DefaultCharset): EntityEncoder[String] = {
     val hdr = `Content-Type`(MediaType.`text/plain`).withCharset(charset)
+#+scalaz-stream
     simple(hdr)(s => ByteVector.view(s.getBytes(charset.nioCharset)))
+#-scalaz-stream
+#+fs2
+    simple(hdr)(s => Chunk.bytes(s.getBytes(charset.nioCharset)))
+#-fs2
   }
 
   implicit def charSequenceEncoder[A <: CharSequence](implicit charset: Charset = DefaultCharset): EntityEncoder[CharSequence] =
@@ -151,8 +175,20 @@ trait EntityEncoderInstances extends EntityEncoderInstances0 {
 
   implicit val charEncoder: EntityEncoder[Char] = charSequenceEncoder.contramap(Character.toString)
 
-  implicit val byteVectorEncoder: EntityEncoder[ByteVector] =
+#+fs2
+  implicit val chunkEncoder: EntityEncoder[Chunk[Byte]] =
     simple(`Content-Type`(MediaType.`application/octet-stream`))(identity)
+#-fs2
+
+  implicit val byteVectorEncoder: EntityEncoder[ByteVector] = {
+#+scalaz-stream
+    simple(`Content-Type`(MediaType.`application/octet-stream`))(identity)
+#-scalaz-stream
+#+fs2
+    chunkEncoder.contramap(bv => Chunk.bytes(bv.toArray))
+#-fs2
+  }
+
 
   implicit val byteArrayEncoder: EntityEncoder[Array[Byte]] = byteVectorEncoder.contramap(ByteVector.apply)
 
