@@ -148,7 +148,7 @@ object EntityDecoder extends EntityDecoderInstances {
 
   /** Decodes a message to a String */
   def decodeString(msg: Message)(implicit defaultCharset: Charset = DefaultCharset): Task[String] =
-    msg.bodyAsText.foldMonoid.runLastOr("")
+    msg.bodyAsText.foldMonoid.runLast.map(_.getOrElse(""))
 }
 
 /** Implementations of the EntityDecoder instances */

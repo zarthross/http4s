@@ -1,6 +1,6 @@
 package org.http4s
 
-import java.io.{File, InputStream, Reader}
+import java.io.{File, FileInputStream, InputStream, Reader}
 import java.nio.ByteBuffer
 import java.nio.file.Path
 
@@ -24,9 +24,9 @@ import scalaz.stream.Cause.{End, Terminated}
 #+fs2
 import fs2.{Stream => Process, Task}
 #-fs2
+import Process.emit
 
 trait EntityEncoder[A] { self =>
-  import Process.emit
 
   /** Convert the type `A` to an [[Entity]] in the `Task` monad */
   def toEntity(a: A): Task[EntityEncoder.Entity]
@@ -166,17 +166,23 @@ trait EntityEncoderInstances extends EntityEncoderInstances0 {
   }
 
   // TODO parameterize chunk size
+  implicit def inputStreamEncoder[A <: InputStream]: EntityEncoder[A] = {
+#+scalaz-stream
+    chunkedEncoder { is: InputStream => io.chunkR(is) }
+#-scalaz-stream
+#+fs2
+    
+#-fs2
+    }
+
+  // TODO parameterize chunk size
   // TODO if Header moves to Entity, can add a Content-Disposition with the filename
   implicit val fileEncoder: EntityEncoder[File] =
-    chunkedEncoder { f: File => file.chunkR(f.getAbsolutePath) }
+    inputStreamEncoder.contramap(new FileInputStream(_))
 
   // TODO parameterize chunk size
   // TODO if Header moves to Entity, can add a Content-Disposition with the filename
   implicit val filePathEncoder: EntityEncoder[Path] = fileEncoder.contramap(_.toFile)
-
-  // TODO parameterize chunk size
-  implicit def inputStreamEncoder[A <: InputStream]: EntityEncoder[A] =
-    chunkedEncoder { is: InputStream => io.chunkR(is) }
 
   // TODO parameterize chunk size
   implicit def readerEncoder[A <: Reader](implicit charset: Charset = DefaultCharset): EntityEncoder[A] =
