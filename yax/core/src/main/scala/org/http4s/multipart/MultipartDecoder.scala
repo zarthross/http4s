@@ -51,8 +51,14 @@ private[http4s] object MultipartDecoder {
         case Some(boundary) =>
           DecodeResult {
             msg.body
+#+scalaz-stream
               .pipe(MultipartParser.parse(Boundary(boundary)))
               .pipe(gatherParts)
+#-scalaz-stream
+#+fs2
+              .through(MultipartParser.parse(Boundary(boundary)))
+              .through(gatherParts)
+#-fs2
               .runLog
               .map(parts => \/-(Multipart(parts, Boundary(boundary))))
               .handle {

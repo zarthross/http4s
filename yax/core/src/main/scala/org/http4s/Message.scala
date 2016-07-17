@@ -45,6 +45,9 @@ sealed trait Message extends MessageOps { self =>
 #+scalaz-stream        
         body |> util.decode(cs)
 #-scalaz-stream
+#+fs2
+        body.through(util.decode(cs))
+#-fs2
     }
 
   }
