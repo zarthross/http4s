@@ -7,12 +7,16 @@ import scodec.bits.ByteVector
 
 import scalaz.State
 import scalaz.concurrent.Task
+import scalaz.std.option.none
+
+#+scalaz-stream
 import scalaz.stream.{process1, Channel, Process, Process1}
 import scalaz.stream.Process._
 import scalaz.stream.io.bufferedChannel
-import scalaz.std.option.none
+#-scalaz-stream
 
 package object util {
+#+scalaz-stream
   /** Temporary.  Contribute back to scalaz-stream. */
   def decode(charset: Charset): Process1[ByteVector, String] = suspend {
     val decoder = charset.nioCharset.newDecoder
@@ -57,6 +61,7 @@ package object util {
 
     breakBigChunks() pipe go() onComplete flush()
   }
+#-scalaz-stream
 
   /** Constructs an assertion error with a reference back to our issue tracker. Use only with head hung low. */
   def bug(message: String): AssertionError =

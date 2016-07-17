@@ -16,8 +16,14 @@ import org.http4s.util.string._
 import scalaz.std.string._
 import scalaz.stream.Process.{ constant, emit }
 import scalaz.stream.io.chunkR
-import scalaz.stream.text.utf8Encode
 import scodec.bits.{ BitVector, ByteVector }
+
+#+scalaz-stream
+import scalaz.stream.text.utf8Encode
+#-scalaz-stream
+#+fs2
+import fs2.text.utf8Encode
+#-fs2
 
 final case class Part(headers: Headers, body: EntityBody) {
   def name: Option[CaseInsensitiveString] = headers.get(`Content-Disposition`).map(_.name)

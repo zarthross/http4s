@@ -1,31 +1,29 @@
 package org
 
+import scalaz.{Kleisli, EitherT, \/}
+import scodec.bits.ByteVector
+
+import org.http4s.util.CaseInsensitiveString
+
 #+scalaz-stream
 import scalaz.concurrent.Task
 import scalaz.stream.Process
-import scodec.bits.ByteVector
 #-scalaz-stream
 #+fs2
 import fs2.{Chunk, Stream => Process, Task}
 #-fs2
-
-import scalaz.{Kleisli, EitherT, \/}
-
-import org.http4s.util.CaseInsensitiveString
 
 package object http4s {
   type AuthScheme = CaseInsensitiveString
 
 #+scalaz-stream
   type EntityBody = Process[Task, ByteVector]
+  val EmptyBody: EntityBody = Process.halt
 #-scalaz-stream
 #+fs2
   type EntityBody = Process[Task, Byte]
-  type ByteVector = Chunk[Byte]
+  val EmptyBody: EntityBody = Process.empty
 #-fs2
-
-
-  def EmptyBody = Process.halt
 
   type DecodeResult[T] = EitherT[Task, DecodeFailure, T]
 

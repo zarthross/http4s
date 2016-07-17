@@ -48,9 +48,10 @@ lazy val coreScalazFs2 = coreProject("core-scalaz-fs2")
   .settings(
     yax(file("yax/core"), "scalaz", "fs2"),
     libraryDependencies ++= Seq(
-      fs2Core,
+      fs2Io,
       fs2Scalaz,
-      scalazCore(scalazVersion.value)
+      scalazCore(scalazVersion.value),
+      scodecBits
     )
   )
 

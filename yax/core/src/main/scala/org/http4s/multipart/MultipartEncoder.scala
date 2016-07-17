@@ -9,11 +9,17 @@ import org.http4s.headers.{ `Content-Type` ⇒ ContentType, `Content-Disposition
 import org.http4s.Http4s._
 import org.http4s.Uri._
 import org.http4s.util._
-import scodec.bits.ByteVector
 import org.http4s.EntityEncoder._
-import scalaz.concurrent.Task
 import Entity._
+import scodec.bits.ByteVector
+
+#+scalaz-stream
+import scalaz.concurrent.Task
 import scalaz.stream.Process
+#-scalaz-stream
+#+fs2
+import fs2.{Stream => Process, Task}
+#-fs2
 
 private[http4s] object MultipartEncoder extends EntityEncoder[Multipart] {
 

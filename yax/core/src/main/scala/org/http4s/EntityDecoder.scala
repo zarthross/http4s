@@ -1,16 +1,5 @@
 package org.http4s
 
-#+fs2
-import fs2.{Chunk, Task}
-import fs2.interop.scalaz._
-#-fs2
-#+scalaz-stream
-import scodec.bits.ByteVector
-import scalaz.concurrent.Task
-import scalaz.stream.{io, process1}
-import org.http4s.util.byteVector._
-#-scalaz-stream
-
 import java.io.{File, FileOutputStream, StringReader}
 import javax.xml.parsers.SAXParser
 
@@ -25,8 +14,20 @@ import scalaz.Liskov.{<~<, refl}
 import scalaz.std.string._
 import scalaz.syntax.monad._
 import scalaz.{-\/, EitherT, \/, \/-}
+import scodec.bits.ByteVector
 
 import util.UrlFormCodec.{ decode => formDecode }
+
+#+scalaz-stream
+import scalaz.concurrent.Task
+import scalaz.stream.{io, process1}
+import org.http4s.util.byteVector._
+#-scalaz-stream
+#+fs2
+import fs2.{Chunk, Task}
+import fs2.io.file._
+import fs2.interop.scalaz._
+#-fs2
 
 /** A type that can be used to decode a [[Message]]
   * EntityDecoder is used to attempt to decode a [[Message]] returning the
@@ -139,7 +140,7 @@ object EntityDecoder extends EntityDecoderInstances {
     val f = identity
 #-scalaz-stream
 #+fs2
-    val f = Chunk[ByteVector].apply
+    val f = Chunk.singleton[Byte] _
 #-fs2
     DecodeResult.success(msg.body.runFoldMap(f))
   }
@@ -175,13 +176,25 @@ trait EntityDecoderInstances {
   // File operations // TODO: rewrite these using NIO non blocking FileChannels, and do these make sense as a 'decoder'?
   def binFile(file: File): EntityDecoder[File] =
     EntityDecoder.decodeBy(MediaRange.`*/*`){ msg =>
-      val p = io.chunkW(new java.io.FileOutputStream(file))
+      def stream = new java.io.FileOutputStream(file)
+#+scalaz-stream
+      val p = io.chunkW(stream)
+#-scalaz-stream
+#+fs2
+      val p = writeOutputStream[Task](Task.delay(stream))
+#-fs2
       DecodeResult.success(msg.body.to(p).run).map(_ => file)
     }
 
   def textFile(file: java.io.File): EntityDecoder[File] =
     EntityDecoder.decodeBy(MediaRange.`text/*`){ msg =>
-      val p = io.chunkW(new java.io.PrintStream(new FileOutputStream(file)))
+      def stream = new java.io.PrintStream(new FileOutputStream(file))
+#+scalaz-stream
+      val p = io.chunkW(stream)
+#-scalaz-stream
+#+fs2
+      val p = writeOutputStream[Task](Task.delay(stream))
+#-fs2
       DecodeResult.success(msg.body.to(p).run).map(_ => file)
     }
 

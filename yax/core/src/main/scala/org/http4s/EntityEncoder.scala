@@ -11,14 +11,20 @@ import org.http4s.EntityEncoder._
 import org.http4s.headers.{`Transfer-Encoding`, `Content-Type`}
 import org.http4s.multipart.{Multipart, MultipartEncoder}
 import scalaz._
-import scalaz.concurrent.Task
 import scalaz.std.option._
+import scalaz.syntax.apply._
+import scodec.bits.ByteVector
+
+#+scalaz-stream
+import scalaz.concurrent.Task
 import scalaz.stream.{Process0, Channel, Process, io}
 import scalaz.stream.nio.file
 import scalaz.stream.Cause.{End, Terminated}
 import scalaz.stream.Process.emit
-import scalaz.syntax.apply._
-import scodec.bits.ByteVector
+#-scalaz-stream
+#+fs2
+import fs2.{Stream => Process, Task}
+#-fs2
 
 trait EntityEncoder[A] { self =>
 
@@ -125,8 +131,10 @@ trait EntityEncoderInstances0 {
         }
     }
 
+#+scalaz-stream
   implicit def process0Encoder[A](implicit W: EntityEncoder[A]): EntityEncoder[Process0[A]] =
     sourceEncoder[A].contramap(_.toSource)
+#-scalaz-stream
 }
 
 trait EntityEncoderInstances extends EntityEncoderInstances0 {
@@ -174,6 +182,7 @@ trait EntityEncoderInstances extends EntityEncoderInstances0 {
   implicit def readerEncoder[A <: Reader](implicit charset: Charset = DefaultCharset): EntityEncoder[A] =
     // TODO polish and contribute back to scalaz-stream
     sourceEncoder[Array[Char]].contramap { r: Reader =>
+#+scalaz-stream
       val unsafeChunkR = io.resource(Task.delay(r))(
         src => Task.delay(src.close())) { src =>
         Task.now { buf: Array[Char] => Task.delay {
@@ -188,6 +197,7 @@ trait EntityEncoderInstances extends EntityEncoderInstances0 {
         f(buf)
       })
       Process.constant(4096).toSource.through(chunkR)
+#-scalaz-stream      
     }
 
   def chunkedEncoder[A](f: A => Channel[Task, Int, ByteVector], chunkSize: Int = 4096): EntityEncoder[A] =

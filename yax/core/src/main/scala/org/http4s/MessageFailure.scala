@@ -1,11 +1,14 @@
 package org.http4s
 
+import scala.util.control.{NoStackTrace, NonFatal}
+import scalaz.{\/-, -\/, Equal}
+
 #+scalaz-stream
 import scalaz.concurrent.Task
 #-scalaz-stream
-
-import scala.util.control.{NoStackTrace, NonFatal}
-import scalaz.{\/-, -\/, Equal}
+#+fs2
+import fs2.Task
+#-fs2
 
 /** Indicates a failure to handle an HTTP [[Message]]. */
 sealed abstract class MessageFailure extends RuntimeException {

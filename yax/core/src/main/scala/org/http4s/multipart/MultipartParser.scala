@@ -6,7 +6,13 @@ import scala.language.postfixOps
 import scodec.bits.ByteVector
 
 import scalaz.{-\/, \/-, \/}
+
+#+scalaz-stream
 import scalaz.stream.{process1, Process, Process1, Writer1}
+#-scalaz-stream
+#+fs2
+import fs2.{Stream => Process}
+#-fs2
 
 /** A low-level multipart-parsing pipe.  Most end users will prefer EntityDecoder[Multipart]. */
 object MultipartParser {

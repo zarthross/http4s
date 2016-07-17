@@ -11,14 +11,21 @@ import java.time.Instant
 import scalaz.stream.Cause.{End, Terminated}
 import scalaz.{\/-, -\/}
 import scalaz.concurrent.{Strategy, Task}
-import scalaz.stream.io
-import scalaz.stream.Process
-import Process._
 
 import org.http4s.headers._
 import org.http4s.Status.NotModified
 import org.log4s.getLogger
 import scodec.bits.ByteVector
+
+#+scalaz-stream
+import scalaz.stream.Process
+import scalaz.stream.io
+#-scalaz-stream
+#+fs2
+import fs2.{Stream => Process}
+import fs2.io
+#-fs2
+import Process._
 
 // TODO: consider using the new scalaz.stream.nio.file operations
 object StaticFile {

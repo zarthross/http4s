@@ -1,9 +1,5 @@
 package org.http4s.util
 
-#+scalaz-stream
-import scodec.bits.ByteVector
-#-scalaz-stream
-
 import java.nio.charset.{ Charset, StandardCharsets }
 import java.time.{ZoneId, Instant}
 import java.time.format.DateTimeFormatter
@@ -11,7 +7,7 @@ import java.util.Locale
 
 import scala.annotation.tailrec
 import scala.collection.immutable.BitSet
-
+import scodec.bits.ByteVector
 
 /** A type class that describes how to efficiently render a type
  * @tparam T the type which will be rendered
@@ -149,6 +145,7 @@ class StringWriter(size: Int = 64) extends Writer {
 
   def result(): String = sb.toString
 }
+
 /** [[Writer]] that will result in a `ByteVector`
   * @param bv initial ByteVector`
   */

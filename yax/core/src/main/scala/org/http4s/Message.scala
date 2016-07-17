@@ -4,10 +4,18 @@ import java.io.File
 import java.net.{InetSocketAddress, InetAddress}
 import org.http4s.headers._
 import org.http4s.server.ServerSoftware
+import scalaz.syntax.monad._
+
+#+scalaz-stream
 import scalaz.concurrent.Task
 import scalaz.stream.Process
 import scalaz.stream.text.utf8Decode
-import scalaz.syntax.monad._
+#-scalaz-stream
+#+fs2
+import fs2.{Stream => Process, Task}
+import fs2.text.utf8Decode
+#-fs2
+
 
 /**
  * Represents a HTTP Message. The interesting subclasses are Request and Response
@@ -27,9 +35,16 @@ sealed trait Message extends MessageOps { self =>
     (charset getOrElse defaultCharset) match {
       case Charset.`UTF-8` =>
         // suspect this one is more efficient, though this is superstition
+#+scalaz-stream
         body |> utf8Decode
+#-scalaz-stream
+#+fs2
+        body.through(utf8Decode)
+#-fs2
       case cs =>
+#+scalaz-stream        
         body |> util.decode(cs)
+#-scalaz-stream
     }
 
   }
