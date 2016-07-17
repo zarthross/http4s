@@ -165,7 +165,7 @@ trait EntityEncoderInstances extends EntityEncoderInstances0 {
     override def headers: Headers = W.headers
   }
 
-    // TODO parameterize chunk size
+  // TODO parameterize chunk size
   // TODO if Header moves to Entity, can add a Content-Disposition with the filename
   implicit val fileEncoder: EntityEncoder[File] =
     chunkedEncoder { f: File => file.chunkR(f.getAbsolutePath) }
@@ -200,8 +200,10 @@ trait EntityEncoderInstances extends EntityEncoderInstances0 {
 #-scalaz-stream      
     }
 
+#+scalaz-stream  
   def chunkedEncoder[A](f: A => Channel[Task, Int, ByteVector], chunkSize: Int = 4096): EntityEncoder[A] =
     sourceEncoder[ByteVector].contramap { a => Process.constant(chunkSize).toSource.through(f(a)) }
+#-scalaz-stream
 
   implicit val multipartEncoder: EntityEncoder[Multipart] =
     MultipartEncoder

@@ -9,6 +9,7 @@ import scalaz.{-\/, \/-, \/}
 
 #+scalaz-stream
 import scalaz.stream.{process1, Process, Process1, Writer1}
+import Process._
 #-scalaz-stream
 #+fs2
 import fs2.{Stream => Process}

@@ -8,7 +8,6 @@ import java.nio.channels.{CompletionHandler, AsynchronousFileChannel}
 import java.util.concurrent.ExecutorService
 import java.time.Instant
 
-import scalaz.stream.Cause.{End, Terminated}
 import scalaz.{\/-, -\/}
 import scalaz.concurrent.{Strategy, Task}
 
@@ -20,10 +19,12 @@ import scodec.bits.ByteVector
 #+scalaz-stream
 import scalaz.stream.Process
 import scalaz.stream.io
+import scalaz.stream.Cause.{End, Terminated}
 #-scalaz-stream
 #+fs2
 import fs2.{Stream => Process}
 import fs2.io
+import fs2.Stream.{empty => halt}
 #-fs2
 import Process._
 
@@ -59,7 +60,12 @@ object StaticFile {
 
       Some(Response(
         headers = headers,
+#+scalaz-stream        
         body    = Process.constant(DefaultBufferSize).toSource.through(io.chunkR(url.openStream))
+#-scalaz-stream
+#+fs2
+        body    = io.file.readInputStream(url.openStream, DefaultBufferSize)
+#-fs2
       ))
     } else Some(Response(NotModified))
   }

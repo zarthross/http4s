@@ -14,8 +14,8 @@ import scalaz.stream.text.utf8Decode
 #+fs2
 import fs2.{Stream => Process, Task}
 import fs2.text.utf8Decode
+import fs2.interop.scalaz._
 #-fs2
-
 
 /**
  * Represents a HTTP Message. The interesting subclasses are Request and Response

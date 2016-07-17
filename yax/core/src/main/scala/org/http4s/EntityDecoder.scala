@@ -140,7 +140,8 @@ object EntityDecoder extends EntityDecoderInstances {
     val f = identity
 #-scalaz-stream
 #+fs2
-    val f = Chunk.singleton[Byte] _
+    import util.byteVector._
+    val f = ByteVector.fromByte _
 #-fs2
     DecodeResult.success(msg.body.runFoldMap(f))
   }

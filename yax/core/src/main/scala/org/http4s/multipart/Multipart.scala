@@ -14,12 +14,12 @@ import org.http4s.headers._
 import org.http4s.util.CaseInsensitiveString
 import org.http4s.util.string._
 import scalaz.std.string._
-import scalaz.stream.Process.{ constant, emit }
-import scalaz.stream.io.chunkR
-import scodec.bits.{ BitVector, ByteVector }
+import scodec.bits.ByteVector
 
 #+scalaz-stream
 import scalaz.stream.text.utf8Encode
+import scalaz.stream.Process.{ constant, emit }
+import scalaz.stream.io.chunkR
 #-scalaz-stream
 #+fs2
 import fs2.text.utf8Encode

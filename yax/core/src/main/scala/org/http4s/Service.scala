@@ -8,6 +8,7 @@ import scalaz.concurrent.Task
 #-scalaz-stream
 #+fs2
 import fs2.Task
+import fs2.interop.scalaz._
 #-fs2
 
 object Service {
