@@ -27,7 +27,8 @@ private[http4s] object MultipartDecoder {
   import Process._
 
   private[this] val logger = getLogger
-  
+
+#+scalaz-stream
   val decoder: EntityDecoder[Multipart] =
     EntityDecoder.decodeBy(MediaRange.`multipart/*`) { msg =>
       def gatherParts = {
@@ -51,14 +52,10 @@ private[http4s] object MultipartDecoder {
         case Some(boundary) =>
           DecodeResult {
             msg.body
-#+scalaz-stream
               .pipe(MultipartParser.parse(Boundary(boundary)))
               .pipe(gatherParts)
-#-scalaz-stream
-#+fs2
               .through(MultipartParser.parse(Boundary(boundary)))
               .through(gatherParts)
-#-fs2
               .runLog
               .map(parts => \/-(Multipart(parts, Boundary(boundary))))
               .handle {
@@ -70,4 +67,5 @@ private[http4s] object MultipartDecoder {
           DecodeResult.failure(InvalidMessageBodyFailure("Missing boundary extension to Content-Type"))
       }
     }
+#-scalaz-stream
 }

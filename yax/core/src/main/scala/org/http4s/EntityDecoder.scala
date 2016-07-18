@@ -207,8 +207,10 @@ trait EntityDecoderInstances {
       DecodeResult.success(msg.body.to(p).run).map(_ => file)
     }
 
+#+scalaz-stream
   implicit def multipart: EntityDecoder[Multipart] = 
     MultipartDecoder.decoder
+#-scalaz-stream
 }
 
 object DecodeResult {
