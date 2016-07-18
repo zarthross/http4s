@@ -24,6 +24,8 @@ import Process.emit
 #-scalaz-stream
 #+fs2
 import fs2.{Chunk, Stream => Process, Task}
+import fs2.io
+import fs2.pipe
 import Process.chunk
 #-fs2
 
@@ -138,7 +140,12 @@ trait EntityEncoderInstances0 {
   implicit def sourceEncoder[A](implicit W: EntityEncoder[A]): EntityEncoder[Process[Task, A]] =
     new EntityEncoder[Process[Task, A]] {
       override def toEntity(a: Process[Task, A]): Task[Entity] = {
+#+scalaz-stream
         Task.now(Entity(a.flatMap(a => Process.await(W.toEntity(a))(_.body)), None))
+#-scalaz-stream
+#+fs2
+        Task.now(Entity(a.flatMap(a => Process.eval(W.toEntity(a)).flatMap(_.body)), None))        
+#-fs2
       }
 
       override def headers: Headers =
@@ -207,9 +214,11 @@ trait EntityEncoderInstances extends EntityEncoderInstances0 {
     chunkedEncoder { is: InputStream => io.chunkR(is) }
 #-scalaz-stream
 #+fs2
-    
-#-fs2
+    sourceEncoder[Byte].contramap[A] { is =>
+      io.file.readInputStream[Task](Task.now(is), 4096)
     }
+#-fs2
+  }
 
   // TODO parameterize chunk size
   // TODO if Header moves to Entity, can add a Content-Disposition with the filename
@@ -223,8 +232,8 @@ trait EntityEncoderInstances extends EntityEncoderInstances0 {
   // TODO parameterize chunk size
   implicit def readerEncoder[A <: Reader](implicit charset: Charset = DefaultCharset): EntityEncoder[A] =
     // TODO polish and contribute back to scalaz-stream
-    sourceEncoder[Array[Char]].contramap { r: Reader =>
 #+scalaz-stream
+    sourceEncoder[Array[Char]].contramap { r: Reader =>
       val unsafeChunkR = io.resource(Task.delay(r))(
         src => Task.delay(src.close())) { src =>
         Task.now { buf: Array[Char] => Task.delay {
@@ -239,8 +248,28 @@ trait EntityEncoderInstances extends EntityEncoderInstances0 {
         f(buf)
       })
       Process.constant(4096).toSource.through(chunkR)
-#-scalaz-stream      
     }
+#-scalaz-stream      
+#+fs2
+    sourceEncoder[Char].contramap { r: Reader =>
+      val buf = new Array[Char](4096)
+
+      def singleRead(r: Reader, buf: Array[Char]): Task[Option[Chunk[Char]]] =
+        Task.delay(r.read(buf)).map { numBytes =>
+          if (numBytes < 0) None
+          else if (numBytes == 0) Some(Chunk.empty)
+          else Some(Chunk.indexedSeq(buf.take(numBytes)))
+        }
+
+      def useR(r: Reader) =
+        Process.eval(singleRead(r, buf))
+          .repeat
+          .through(pipe.unNoneTerminate)
+          .flatMap(Process.chunk)
+
+      Process.bracket(Task.now(r))(useR, r => Task.delay(r.close()))
+    }
+#-fs2
 
 #+scalaz-stream  
   def chunkedEncoder[A](f: A => Channel[Task, Int, ByteVector], chunkSize: Int = 4096): EntityEncoder[A] =
