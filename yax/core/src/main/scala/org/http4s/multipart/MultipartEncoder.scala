@@ -55,7 +55,12 @@ private[http4s] object MultipartEncoder extends EntityEncoder[Multipart] {
                        Boundary.CRLF               result()    
 
     val _start         = start(mp.boundary)
-    val _end           = end(mp.boundary)
+#+scalaz-stream    
+    val _end           = Process.emit(end(mp.boundary))
+#-scalaz-stream
+#+fs2
+    val _end           = Process.chunk(Chunk.bytes(end(mp.boundary).toArray))
+#-fs2
     val _encapsulation = ByteVector(encapsulation(mp.boundary).getBytes)
 
     def renderPart(prelude: ByteVector, p: Part): EntityBody = {
@@ -74,7 +79,7 @@ private[http4s] object MultipartEncoder extends EntityEncoder[Multipart] {
     val parts = mp.parts
     val body = parts.tail.foldLeft(renderPart(_start, parts.head)) { (acc, part) =>
       acc ++ renderPart(_encapsulation, part)
-    } ++ Process.emit(_end)
+    } ++ _end
 
     Task.now(EntityEncoder.Entity(body, None))
   }

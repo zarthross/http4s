@@ -1,6 +1,6 @@
 package org.http4s
 
-import java.nio.CharBuffer
+import java.nio.{ByteBuffer, CharBuffer}
 import java.nio.charset.CharsetDecoder
 
 import scodec.bits.ByteVector
@@ -14,6 +14,11 @@ import scalaz.stream.{process1, Channel, Process, Process1}
 import scalaz.stream.Process._
 import scalaz.stream.io.bufferedChannel
 #-scalaz-stream
+#+fs2
+import fs2._
+import fs2.Pull._
+import fs2.Stream._
+#-fs2
 
 package object util {
 #+scalaz-stream
@@ -62,6 +67,53 @@ package object util {
     breakBigChunks() pipe go() onComplete flush()
   }
 #-scalaz-stream
+#+fs2
+  /** Temporary.  Contribute back to fs2 */
+  def decode[F[_]](charset: Charset): Pipe[F, Byte, String] = {
+    val decoder = charset.nioCharset.newDecoder
+    var carryOver: Chunk[Byte] = Chunk.empty
+
+    def push(chunk: Chunk[Byte], eof: Boolean) = {
+      val in = Chunk.concat(Seq(carryOver, chunk))
+      val byteBuffer = ByteBuffer.wrap(in.toArray).asReadOnlyBuffer
+      val charBuffer = CharBuffer.allocate(in.size.toInt + 1)
+      decoder.decode(byteBuffer, charBuffer, eof)
+      if (eof)
+        decoder.flush(charBuffer)
+      else
+        carryOver = Chunk.bytes(byteBuffer.slice.array)
+      charBuffer.flip().toString
+    }
+
+    // A chunk can now be longer than Int.MaxValue, but the CharBuffer
+    // above cannot.  We need to split enormous chunks just in case.
+    def breakBigChunks: Pipe[F, Byte, Byte] = 
+      _ pull { _ receive { case chunk #: h =>
+        (chunk.take(Int.MaxValue - 1), chunk.drop(Int.MaxValue - 1)) match {
+          case (bytes, Chunk.empty) =>
+            output(bytes)
+          case (bytes, tail) =>
+            output(bytes)
+        }
+      }
+    }
+
+    def go: Pipe[F, Byte, String] =
+      _ repeatPull { _ receive { case chunk #: h =>
+        (push(chunk, false) match {
+          case "" => done
+          case s if s.nonEmpty => output1(s)
+        }) as h
+      }}
+
+    val flush = {
+      val s = push(Chunk.empty, true)
+      if (s.nonEmpty) emit(s) else empty
+    }
+
+    breakBigChunks andThen go andThen (_ ++ flush)
+  }
+#-fs2
 
   /** Constructs an assertion error with a reference back to our issue tracker. Use only with head hung low. */
   def bug(message: String): AssertionError =
