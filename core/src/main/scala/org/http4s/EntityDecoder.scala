@@ -24,10 +24,10 @@ import scalaz.stream.{io, process1}
 import org.http4s.util.byteVector._
 #-scalaz-stream
 #+fs2
-import fs2.{Chunk, Task}
-import fs2.io.file._
+import fs2.{Chunk, Pull, Task}
 import fs2.interop.scalaz._
 #-fs2
+import streams._
 
 /** A type that can be used to decode a [[Message]]
   * EntityDecoder is used to attempt to decode a [[Message]] returning the
@@ -161,14 +161,7 @@ trait EntityDecoderInstances {
   /** Provides a mechanism to fail decoding */
   def error[T](t: Throwable) = new EntityDecoder[T] {
     override def decode(msg: Message, strict: Boolean): DecodeResult[T] = {
-#+scalaz-stream      
       DecodeResult(msg.body.kill.run.flatMap(_ => Task.fail(t)))
-#-scalaz-stream
-#+fs2
-      // TODO drain is less efficient than kill for substantially large
-      // bodies, but there is no longer a means to early-terminate a stream.
-      DecodeResult(msg.body.drain.run.flatMap(_ => Task.fail(t)))      
-#-fs2
     }
     override def consumes: Set[MediaRange] = Set.empty
   }
@@ -186,25 +179,13 @@ trait EntityDecoderInstances {
   def binFile(file: File): EntityDecoder[File] =
     EntityDecoder.decodeBy(MediaRange.`*/*`){ msg =>
       def stream = new java.io.FileOutputStream(file)
-#+scalaz-stream
-      val p = io.chunkW(stream)
-#-scalaz-stream
-#+fs2
-      val p = writeOutputStream[Task](Task.delay(stream))
-#-fs2
-      DecodeResult.success(msg.body.to(p).run).map(_ => file)
+      DecodeResult.success(msg.body.to(chunkW(stream)).run).map(_ => file)
     }
 
   def textFile(file: java.io.File): EntityDecoder[File] =
     EntityDecoder.decodeBy(MediaRange.`text/*`){ msg =>
       def stream = new java.io.PrintStream(new FileOutputStream(file))
-#+scalaz-stream
-      val p = io.chunkW(stream)
-#-scalaz-stream
-#+fs2
-      val p = writeOutputStream[Task](Task.delay(stream))
-#-fs2
-      DecodeResult.success(msg.body.to(p).run).map(_ => file)
+      DecodeResult.success(msg.body.to(chunkW(stream)).run).map(_ => file)
     }
 
 #+scalaz-stream

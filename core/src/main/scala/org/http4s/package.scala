@@ -6,12 +6,13 @@ import scodec.bits.ByteVector
 
 import org.http4s.util.CaseInsensitiveString
 
+import org.http4s.streams._
 #+scalaz-stream
 import scalaz.concurrent.Task
 import scalaz.stream.Process
 #-scalaz-stream
 #+fs2
-import fs2.{Chunk, Stream => Process, Task}
+import fs2.{Chunk, Pull, Stream, Task}
 #-fs2
 
 package object http4s {
@@ -22,8 +23,8 @@ package object http4s {
   val EmptyBody: EntityBody = Process.halt
 #-scalaz-stream
 #+fs2
-  type EntityBody = Process[Task, Byte]
-  val EmptyBody: EntityBody = Process.empty
+  type EntityBody = Stream[Task, Byte]
+  val EmptyBody: EntityBody = Stream.empty
 #-fs2
 
   // This is perhaps in poor taste, but right now, we're trying to do a
@@ -115,4 +116,7 @@ package object http4s {
   }
 
   type Callback[A] = Throwable \/ A => Unit
+
+#+fs2
+#-fs2
 }
