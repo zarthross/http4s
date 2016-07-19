@@ -35,9 +35,9 @@ def coreProject(mod: String) = libraryProject(mod)
     macroParadiseSetting
   )
 
-lazy val core = coreProject("core")
+lazy val core = coreProject("core-scalaz-stream")
   .settings(
-    yax(file("yax/core"), "scalaz", "scalaz-stream"),
+    yax(file("core"), "scalaz", "scalaz-stream"),
     libraryDependencies ++= Seq(
       scalazCore(scalazVersion.value),
       scalazStream(scalazVersion.value)
@@ -46,7 +46,7 @@ lazy val core = coreProject("core")
 
 lazy val coreScalazFs2 = coreProject("core-scalaz-fs2")
   .settings(
-    yax(file("yax/core"), "scalaz", "fs2"),
+    yax(file("core"), "scalaz", "fs2"),
     libraryDependencies ++= Seq(
       fs2Io,
       fs2Scalaz,
@@ -57,7 +57,7 @@ lazy val coreScalazFs2 = coreProject("core-scalaz-fs2")
 
 lazy val coreCats = coreProject("core-cats")
   .settings(
-    yax(file("yax/core"), "cats", "fs2"),
+    yax(file("core"), "cats", "fs2"),
     libraryDependencies ++= Seq(
       cats,
       fs2Core

@@ -66,6 +66,7 @@ object yax {
     }
 
   private def foo(src: File, flags: String*) = Def.task {
+    println("SOURCE = "+src)
     walk(src, sourceManaged.value, flags.toSet)
   }
 
