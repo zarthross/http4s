@@ -177,10 +177,12 @@ class BlazeBuilder(
       address = new InetSocketAddress(address.getHostString, address.getPort)
 
     // if we have a Failure, it will be caught by the Task
+    println("XXX STARTING UP "+address)
     val serverChannel = factory.bind(address, pipelineFactory).get
 
     new Server {
       override def shutdown: Task[Unit] = Task.delay {
+        println("XXX SHUTTING DOWN "+address)
         serverChannel.close()
         factory.closeGroup()
       }
