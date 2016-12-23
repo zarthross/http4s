@@ -130,6 +130,10 @@ object twstream extends TaskApp {
 }
 ```
 
+```tut:silent
+server.shutdownNow()
+```
+
 [client]: client.html
 [entity]: entity.html
 [ScalaSyd 2015]: https://bitbucket.org/da_terry/scalasyd-doobie-http4s

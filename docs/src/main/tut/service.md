@@ -126,7 +126,7 @@ associates a base path with a `HttpService`.
 A builder can be `run` to start the server.
 
 ```tut:book
-val blazeServer = builder.run
+val server = builder.run
 ```
 
 ### Running your service as an `App`
@@ -157,7 +157,7 @@ Our server consumes system resources. Let's clean up after ourselves by shutting
 it down:
 
 ```tut:book
-blazeServer.shutdownNow()
+server.shutdownNow()
 ```
 
 ### Next steps
