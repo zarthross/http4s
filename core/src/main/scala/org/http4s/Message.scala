@@ -30,11 +30,11 @@ sealed trait Message[F[_]] extends Media[F] { self =>
 
   def attributes: Vault
 
-  protected def change(
+  protected def change[F0[_]](
       httpVersion: HttpVersion = httpVersion,
-      body: EntityBody[F] = body,
+      body: EntityBody[F0] = body,
       headers: Headers = headers,
-      attributes: Vault = attributes): Self
+      attributes: Vault = attributes): SelfF[F0]
 
   def withHttpVersion(httpVersion: HttpVersion): Self =
     change(httpVersion = httpVersion)
@@ -176,7 +176,7 @@ sealed trait Message[F[_]] extends Media[F] { self =>
   /**
     * Lifts this Message's body to the specified effect type.
     */
-  def covary[F2[x] >: F[x]]: SelfF[F2] = this.asInstanceOf[SelfF[F2]]
+  def covary[F2[x] >: F[x]]: SelfF[F2] = change(body = body.covary[F2])
 }
 
 object Message {
@@ -213,15 +213,15 @@ final class Request[F[_]](
 
   type SelfF[F0[_]] = Request[F0]
 
-  private def copy(
+  private def copy[F0[_]](
       method: Method = this.method,
       uri: Uri = this.uri,
       httpVersion: HttpVersion = this.httpVersion,
       headers: Headers = this.headers,
-      body: EntityBody[F] = this.body,
+      body: EntityBody[F0] = this.body,
       attributes: Vault = this.attributes
-  ): Request[F] =
-    Request(
+  ): Request[F0] =
+    Request[F0](
       method = method,
       uri = uri,
       httpVersion = httpVersion,
@@ -246,13 +246,13 @@ final class Request[F[_]](
   def withUri(uri: Uri): Self =
     copy(uri = uri, attributes = attributes.delete(Request.Keys.PathInfoCaret))
 
-  override protected def change(
+  override protected def change[F0[_]](
       httpVersion: HttpVersion,
-      body: EntityBody[F],
+      body: EntityBody[F0],
       headers: Headers,
       attributes: Vault
-  ): Self =
-    copy(
+  ): SelfF[F0] =
+    copy[F0](
       httpVersion = httpVersion,
       body = body,
       headers = headers,
@@ -497,12 +497,12 @@ final case class Response[F[_]](
   def withStatus(status: Status): Self =
     copy(status = status)
 
-  override protected def change(
+  override protected def change[F0[_]](
       httpVersion: HttpVersion,
-      body: EntityBody[F],
+      body: EntityBody[F0],
       headers: Headers,
       attributes: Vault
-  ): Self =
+  ): SelfF[F0] =
     copy(
       httpVersion = httpVersion,
       body = body,
