@@ -115,6 +115,16 @@ package object server {
   type HttpMiddleware[F[_]] =
     Middleware[OptionT[F, *], Request[F], Response[F], Request[F], Response[F]]
 
+  /** An HTTP middleware converts an [[HttpRoutes]] to another.
+    */
+  type HttpRoutesMiddleware[F[_]] =
+    Middleware[OptionT[F, *], Request[F], Response[F], Request[F], Response[F]]
+
+  /** An HTTP middleware converts an [[HttpApp]] to another.
+    */
+  type HttpAppMiddleware[F[_]] =
+    Middleware[F, Request[F], Response[F], Request[F], Response[F]]
+
   /** An HTTP middleware that authenticates users.
     */
   type AuthMiddleware[F[_], T] =
