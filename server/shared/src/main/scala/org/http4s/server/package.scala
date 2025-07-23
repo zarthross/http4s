@@ -110,20 +110,20 @@ package object server {
     */
   type Middleware[F[_], A, B, C, D] = Kleisli[F, A, B] => Kleisli[F, C, D]
 
-  /** An HTTP middleware converts an [[HttpRoutes]] to another.
+  /** An HTTP middleware converts an [[Http]] to another.
     */
-  type HttpMiddleware[F[_]] =
-    Middleware[OptionT[F, *], Request[F], Response[F], Request[F], Response[F]]
+  type HttpMiddleware[F[_], G[_]] =
+    Middleware[G, Request[F], Response[F], Request[F], Response[F]]
 
   /** An HTTP middleware converts an [[HttpRoutes]] to another.
     */
   type HttpRoutesMiddleware[F[_]] =
-    Middleware[OptionT[F, *], Request[F], Response[F], Request[F], Response[F]]
+    HttpMiddleware[F, OptionT[F, *]]
 
   /** An HTTP middleware converts an [[HttpApp]] to another.
     */
   type HttpAppMiddleware[F[_]] =
-    Middleware[F, Request[F], Response[F], Request[F], Response[F]]
+    HttpMiddleware[F, F]
 
   /** An HTTP middleware that authenticates users.
     */
